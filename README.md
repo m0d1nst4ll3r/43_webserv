@@ -1,4 +1,8 @@
+# Webserv, a 42 common core project
+
 [Subject](https://cdn.intra.42.fr/pdf/pdf/222787/en.subject.pdf)
+
+### Introduction
 
 webserv is a very basic web server that only handles GET, POST, DELETE. Otherwise, it acts like a very simple web server that should be compatible with any web client, like a browser.
 
