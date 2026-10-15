@@ -1,4 +1,12 @@
-### Webserv thoughts
+[Subject](https://cdn.intra.42.fr/pdf/pdf/222787/en.subject.pdf)
+
+webserv is a very basic web server that only handles GET, POST, DELETE. Otherwise, it acts like a very simple web server that should be compatible with any web client, like a browser.
+
+The project is in the process of being built. This README is a collection of thoughts and ideas pertaining to development, but will be cleaned up once the project is complete.
+
+### Development thoughts
+
+#### What is a web server
 
 A web server is a program that should run on a machine, be reachable on the internet, and serve clients. The way to serve clients is to respond to HTTP requests to allow access to the websites hosted on the server. A single server can host multiple websites.
 
@@ -6,7 +14,7 @@ A website is a collection of pages and resources such as index.html or cat.jpg. 
 
 A web server can also handle cookies, post requests, users signing in, logging in, etc...
 
-In my very basic webserv.cpp test, I am opening a socket and listening in on a port. The kernel handles TCP/IP communication, so the only thing we have to handle is the HTTP requests.
+The kernel handles TCP/IP communication, so the only thing we _should_ have to handle is the HTTP requests.
 
 An HTTP request looks like:
 
@@ -28,7 +36,7 @@ Content-Type: text/plain
 Content-Length: 13
 Hello, world!
 
-### Current progression
+#### Current progression
 
 In my very basic webserv.cpp test, I am opening a socket and listening in on a port. I then wait (forever) for a connection, read it (completely), and reply directly with a generic message, then leave.
 
@@ -81,7 +89,7 @@ Method questions:
 - Examples show responses with Date: etc... Do we have to do this? Send back the metadata of the file beyond just Content-Length?
 - What the hell should we do when we receive POST? Just allow writing whatever file into the server? What if this replaces a file?...
 
-### The start of a program structure
+#### Thinking about program structure
 
 The server will handle many concurrent connections and requests.
 
@@ -96,5 +104,3 @@ Maybe we should have a "Connection" class which holds a Request object, as well 
 ### Resources
 
 [MDN HTTP Overview](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview) and further documentation pages
-
-[Subject](https://cdn.intra.42.fr/pdf/pdf/222787/en.subject.pdf)
