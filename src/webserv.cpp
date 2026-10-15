@@ -9,7 +9,7 @@
 #include <sstream>
 #include <stdexcept>
 
-// Read from socket, only stop when finding /r/n/r/n or running out of bytes to read
+// Read from socket, only stop when finding \r\n\r\n or running out of bytes to read
 std::string	receiveMsg(int sockfd)
 {
 	char		buf[64];
@@ -36,7 +36,10 @@ int	openSocket()
 		throw std::runtime_error("socket failed: " + std::string(strerror(errno)));
 	const int	enable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+	{
+		close(sockfd);
 		throw std::runtime_error("setsockopt failed: " + std::string(strerror(errno)));
+	}
 	return sockfd;
 }
 
@@ -72,7 +75,7 @@ int	waitForMsg(int sockfd)
 }
 
 // Reply with generic header
-void	reply(int sockfd, std::string msg)
+void	reply(int sockfd, const std::string& msg)
 {
 	std::ostringstream	oss;
 	std::string 		reply;
