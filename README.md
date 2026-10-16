@@ -108,3 +108,5 @@ Maybe we should have a "Connection" class which holds a Request object, as well 
 ### Resources
 
 [MDN HTTP Overview](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview) and further documentation pages
+
+[Computerphile web server in 25 lines (in Rust)](https://youtu.be/7GBlCinu9yg) and other Computerphile vids
