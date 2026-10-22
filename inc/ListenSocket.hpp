@@ -6,12 +6,15 @@ class ListenSocket
 	public:
 
 	// Construction opens new socket, binds it, sets it to listen
+	// Throws if any socket, bind, setsockopt, listen call fails
 	ListenSocket(int port);
 	// Destruction closes socket
 	~ListenSocket();
 
 	// Attempts accept(), will not block since SOCK_NONBLOCK was set, might still fail and throw
 	int accept();
+
+	// 
 
 	private:
 

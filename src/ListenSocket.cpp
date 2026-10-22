@@ -44,6 +44,8 @@ ListenSocket::~ListenSocket()
 	close(_sockfd);
 }
 
+// Make sure socket is polled before calling, or call will throw with EAGAIN or EWOULDBLOCK
+// Note that this will still throw if connection is lost between poll and call
 int ListenSocket::accept()
 {
 	int clientfd;

@@ -9,23 +9,6 @@
 #include <sstream>
 #include <stdexcept>
 
-// Read from socket, only stop when finding \r\n\r\n or running out of bytes to read
-std::string	receiveMsg(int sockfd)
-{
-	char		buf[64];
-	int			ret;
-	std::string	msg;
-
-	do
-	{
-		ret = recv(sockfd, buf, 64, 0);
-		if (ret < 0)
-			throw std::runtime_error("Read fail: " + std::string(std::strerror(errno)));
-		msg.append(buf, ret);
-	} while (ret && msg.find("\r\n\r\n") == std::string::npos);
-	return msg;
-}
-
 // Reply with generic header
 void	reply(int sockfd, const std::string& msg)
 {
@@ -41,51 +24,54 @@ void	reply(int sockfd, const std::string& msg)
 	send(sockfd, reply.c_str(), reply.size(), 0);
 }
 
-// Open a socket, bind it to 8080, listen for a msg and print it
-void	socket_test()
+void	webserv()
 {
-	int					acceptfd = -1;
-
-	try
+	// No config yet, no signal setup, etc...
+	// Init epoll
+	int				epoll_fd = epoll_create(1); // Parameter is ignored
+	// Init listen socket
+	ListenSocket	lsocket(8080); // For now we only have one listening socket. Later we will have one per interface:port pair.
+	if (epoll_fd < 0) // SHOULD HAVE AN EPOLL CLASS
+		return 1;
+	// Main loop
+	while (1) // TODO: Handle SIGKILL with global to stop loop and exit cleanly
 	{
-		int port = 8080;
-		// Open
-		std::cout << "\033[33m1:\033[0m Creating new listenSocket on port " << port << "... ";
-		ListenSocket		listenSocket(port);
-		std::cout << "\033[33mDone\033[0m\n";
-
-		// Wait & Print
-		std::cout << "\033[33m2:\033[0m Waiting... " << std::flush;
-		acceptfd = listenSocket.accept();
-		std::string	msg = receiveMsg(acceptfd);
-		if (!msg.empty())
-		{
-			std::cout << "\033[31mMessage received:\033[0m\n";
-			std::cout << "\033[36m" << msg << "\033[0m";
-		}
-		else
-			std::cout << "\033[31mNo message\033[0m\n";
-
-		// Reply "Hello world!"
-		std::cout << "\033[33m3:\033[0m Replying... ";
-		reply(acceptfd, "Hello, world!\n");
-		std::cout << "\033[33mDone\033[0m\n";
-
-		// Close
-		close(acceptfd);
-	}
-	catch (const std::exception& e)
-	{
-		if (acceptfd >= 0)
-			close(acceptfd);
-		std::cerr << "\n\033[31mError:\033[0m " << e.what() << "\n";
+		// 1. Epoll (listen sockets, readable clients always, sendable clients if needed)
+		// 2. Accept whatever needs accepting and register to epoll (read event) if successful
+		// 3. For readable clients, recv (meaning, add to recv buffer)
+		//    + If recv buffer contains \r\n\r\n, build request
+		//    + If request expects body, continue reading for content-length
+		//    + If request is complete (nothing more to recv), register write event to epoll for this socket
+		// 4. For writeable clients (meaning we have data to send to them), send (call send and update buffer offset)
+		//    + If we have sent everything, unregister write event
 	}
 }
 
 int	main()
 {
-	socket_test();
+	return 0;
 }
+
+// epoll thoughts: (THESE THOUGHTS DO NOT TAKE MULTI-THREADING INTO ACCOUNT)
+//
+//   epoll_create(1)
+// This returns epoll_fd and we need that for all epoll actions: epoll_ctl and epoll_wait.
+//
+// We need to use epoll_ctl every time we want to register or unregister a new fd and its flags:
+//  a. On listen socket creation (EPOLLIN)
+//  b. Whenever we have reached client connection cap (unregister all listen socket fds)
+//      (if we don't do that, epoll_wait will insta return and we will use 100% CPU)
+//  c. Whenever we have free client connection slots again (register all listen socket fds)
+//  d. On client socket creation (EPOLLIN)
+//  e. On client reaching responding state (EPOLLOUT and unregister EPOLLIN)
+//  f. On client reaching reading state (EPOLLIN and unregister EPOLLOUT)
+// No need to unregister an fd when we close a socket - this is done automatically (ignoring multi-threading).
+//
+// We also need epoll_fd for epoll_wait (but this is done in main loop and is fine)
+//
+// The main problem is that we need to send epoll_fd to socket classes.
+// We will handle multi-threading when we get to it.
+
 
 // Next step:
 //
@@ -96,11 +82,40 @@ int	main()
 // 5. For now, ignore the request receive, just read into a buffer until 0 or \r\n\r\n like I said, but ignore the buffer
 // 6. After the request is complete (we're not building it yet), reply with generic response, nothing is happening yet.
 
+// Thoughts:
+//
+// Make sure to use
+// signal(SIGPIPE, SIG_IGN)
+// At startup eventually, since sending to a closed connection will raise SIGPIPE which by default kills the program
+//
+// Register EPOLLOUT only if there is a response to send (this will depend on connection status)
+// Register EPOLLIN when there is data to receive
+//
+// Might be interesting to log everything that happens: config, listen sockets, connections...
+//
+// Make sure to limit header size, just like body size (body size limit is set in config file)
+//
+// Remember to limit the number of concurrent client connections. Otherwise, a DDoS attack will crash the server.
+// We can also limit the number of connections from a single address or a single address:port to avoid one guy holding
+//  all slots hostage (or at least make it harder, they will have to own more addresses).
+//
+// Remember to honor "Connection: close" - this in a request tells the server to close the connection after sending the response
+// Also close after sending an error, as the connection is poisoned.
 
 // Questions:
 //
-// I made an accept method for my ListenSocket but. What if my epoll says my ListenSocket has a pending connection, but then
+// Q: I made an accept method for my ListenSocket but. What if my epoll says my ListenSocket has a pending connection, but then
 //  by the time that I accept, the pending connection's gone?
+// A: Then the accept fails and we continue execution
+//
+// Q: What if my epoll finds that a listen socket has several pending connections - do I accept in a loop or do I accept ONCE
+//  and then run another epoll_wait?
+//
+// Q: Do we read additional requests in advance while responding? Do we build a queue of requests for one connection?
+// A: No. Gains too little, unnecessary. Build a state machine: READING_REQUEST -> (complete request parsed) -> WRITING_RESPONSE
+//     Only start reading the next request after having sent all of the response. Note that the next request might (fully) live
+//     inside of the buffer, so check the buffer for a full request first. Also unregister the read event from epoll until we
+//     actually want to read again. This makes for a clean design.
 
 
 // Ideas on what a full prog might look like
