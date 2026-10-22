@@ -9,13 +9,17 @@ class EpollInstance
 
 	// Create epoll instance, can throw
 	EpollInstance();
-	// Close _fd
+	// Close fd
 	~EpollInstance();
 
-	// Register read event for fd
-	// Unregister read event for fd
-	// Register write event for fd
-	// Unregister write event for fd
+	// Register recv event for fd
+	void addRecv(int fd);
+	// Unregister recv event for fd
+	void rmRecv(int fd);
+	// Register send event for fd
+	void addSend(int fd);
+	// Unregister send event for fd
+	void rmSend(int fd);
 
 	private:
 
