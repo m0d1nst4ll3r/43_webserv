@@ -6,36 +6,60 @@
 #include <string>
 #include <unistd.h>
 
-EpollInstance::EpollInstance()
+namespace
 {
-	_fd = epoll_create1(0);
-	if (_fd < 0)
-		throw std::runtime_error("epoll_create failed: " + std::string(std::strerror(errno)));
+	int createEpoll()
+	{
+		int fd = epoll_create1(0);
+		if (fd < 0)
+			throw std::runtime_error("epoll_create failed: " + std::string(std::strerror(errno)));
+		return fd;
+	}
 }
 
-EpollInstance::~EpollInstance()
+// Create instance
+EpollInstance::EpollInstance() : _events(64), _fd(createEpoll()) {}
+
+// Close instance
+EpollInstance::~EpollInstance() {}
+
+// Add new fd
+void	EpollInstance::add(int fd, void *ptr, uint32_t events)
 {
-	close(_fd);
+	struct epoll_event ev;
+	ev.events = events;
+	ev.data.ptr = ptr;
+	if (epoll_ctl(_fd.fd(), EPOLL_CTL_ADD, fd, &ev) < 0)
+		throw std::runtime_error("epoll_ctl (add) failed: " + std::string(std::strerror(errno)));
 }
 
-void EpollInstance::addRecv(int fd)
+// Mod existing fd
+void	EpollInstance::mod(int fd, void *ptr, uint32_t events)
 {
-	struct epoll_event	ev = {};
-	ev.events = EPOLLIN;
-	epoll_ctl(_fd, EPOLL_CTL_ADD, fd, EPOLLIN);
+	struct epoll_event ev;
+	ev.events = events;
+	ev.data.ptr = ptr;
+	if (epoll_ctl(_fd.fd(), EPOLL_CTL_MOD, fd, &ev) < 0)
+		throw std::runtime_error("epoll_ctl (mod) failed: " + std::string(std::strerror(errno)));
 }
 
-void EpollInstance::rmRecv(int fd)
+// Remove existing fd (ignores errors)
+void	EpollInstance::del(int fd)
 {
-
+	epoll_ctl(_fd.fd(), EPOLL_CTL_DEL, fd, 0);
 }
 
-void EpollInstance::addSend(int fd)
+// Wait for events
+int		EpollInstance::wait(int timeout_ms)
 {
-
+	int ret;
+	ret = epoll_wait(_fd.fd(), &_events[0], 64, timeout_ms);
+	if (ret < 0)
+		throw std::runtime_error("epoll_wait failed: " + std::string(std::strerror(errno)));
+	return ret;
 }
 
-void EpollInstance::rmSend(int fd)
+struct epoll_event EpollInstance::operator[](int i) const
 {
-
+	return _events[i];
 }

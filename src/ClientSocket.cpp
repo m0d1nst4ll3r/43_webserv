@@ -1,5 +1,7 @@
+#include "FileDescriptor.hpp"
 #include "ClientSocket.hpp"
 #include "ListenSocket.hpp"
+#include "EpollInstance.hpp"
 #include <stdexcept>
 #include <cerrno>
 #include <cstring> // strerror
@@ -7,21 +9,23 @@
 #include <fcntl.h> // fcntl
 #include <sys/socket.h>
 #include <sys/types.h> // send, recv
+#include <string>
 
 // Construct by calling accept() on listen socket
 // Also set new socket to O_NONBLOCK (accept4() is not an allowed function)
-ClientSocket::ClientSocket(const ListenSocket& lsock)
+// This might throw if ListenSocket has no pending connection, which is possible even with polling
+ClientSocket::ClientSocket(ListenSocket& lsock, EpollInstance& epoll) : _epoll(&epoll), _sockfd(lsock.accept())
 {
-	// This might throw if ListenSocket has no pending connection, which is possible even with polling
-	_sockfd = lsock.accept();
 	// Set socket to O_NONBLOCK
-	if (fcntl(_sockfd, F_SETFL, O_NONBLOCK))
+	if (fcntl(_sockfd.fd(), F_SETFL, O_NONBLOCK))
 		throw std::runtime_error("fcntl failed: " + std::string(std::strerror(errno)));
+	// Add socket to epoll (can throw)
+	_epoll->add(_sockfd.fd(), this, EPOLLIN);
 }
 
 ClientSocket::~ClientSocket()
 {
-	close(_sockfd);
+	_epoll->del(_sockfd.fd());
 }
 
 // Calls a single send()
@@ -30,7 +34,7 @@ ClientSocket::~ClientSocket()
 size_t	ClientSocket::send(const char* buf, size_t size)
 {
 	ssize_t	ret;
-	ret = send(_sockfd, buf, size, 0);
+	ret = ::send(_sockfd.fd(), buf, size, 0);
 	if (ret < 1)
 		throw std::runtime_error("send failed: " + std::string(std::strerror(errno)));
 	return ret;
@@ -42,12 +46,22 @@ size_t	ClientSocket::send(const char* buf, size_t size)
 std::string	ClientSocket::recv()
 {
 	const size_t	bufsize = 16383; // 16 kB
-	char*			buf[bufsize + 1];
+	char			buf[bufsize + 1];
 	ssize_t			ret;
 
-	ret = recv(_sockfd, buf, bufsize, 0);
+	ret = ::recv(_sockfd.fd(), buf, bufsize, 0);
 	if (ret < 1)
 		throw std::runtime_error("recv failed: " + std::string(std::strerror(errno)));
 	buf[ret] = 0;
 	return std::string(buf);
+}
+
+void	ClientSocket::setRecv()
+{
+	_epoll->mod(_sockfd.fd(), this, EPOLLIN);
+}
+
+void	ClientSocket::setSend()
+{
+	_epoll->mod(_sockfd.fd(), this, EPOLLOUT);
 }
