@@ -6,7 +6,7 @@
 #    By: rapohlen <rapohlen@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/01/15 16:45:41 by rapohlen          #+#    #+#              #
-#    Updated: 2026/10/15 18:13:11 by rapohlen         ###   ########.fr        #
+#    Updated: 2026/10/23 14:28:19 by rapohlen         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,7 +16,7 @@ SRCDIR		= src
 SRC			= $(addprefix $(SRCDIR)/, $(CFILES))
 
 # Header directories
-INCDIR		=
+INCDIR		= inc
 
 # Build directory
 BUILDDIR	= .build
