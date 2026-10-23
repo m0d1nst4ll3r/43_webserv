@@ -3,15 +3,17 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: rapohlen <rapohlen@student.42.fr>          +#+  +:+       +#+         #
+#    By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/01/15 16:45:41 by rapohlen          #+#    #+#              #
-#    Updated: 2026/10/23 14:28:19 by rapohlen         ###   ########.fr        #
+#    Updated: 2026/10/23 16:39:53 by ltourbe          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 # Source files
-CFILES		= webserv.cpp
+CFILES		=	main.cpp \
+				Config.cpp \
+				LocationConfig.cpp
 SRCDIR		= src
 SRC			= $(addprefix $(SRCDIR)/, $(CFILES))
 
