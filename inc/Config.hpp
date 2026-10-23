@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Config.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
+/*   By: leo <leo@student.42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/22 18:45:26 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/23 16:35:57 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/23 20:25:52 by leo              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,8 +21,8 @@
 struct ListenAddress
 {
     std::string interface;
-
-   int port;
+	
+	int port;
 };
 
 class Config
