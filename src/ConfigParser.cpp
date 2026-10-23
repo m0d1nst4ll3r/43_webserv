@@ -6,7 +6,7 @@
 /*   By: leo <leo@student.42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:46:25 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/23 20:55:16 by leo              ###   ########.fr       */
+/*   Updated: 2026/10/24 00:46:11 by leo              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,45 @@ ConfigParser::ConfigParser()
 
 ConfigParser::~ConfigParser()
 {
+}
+
+bool isDirective(const std::string& line, const std::string& name)
+{
+    std::istringstream stream(line);
+    std::string directive;
+
+    stream >> directive;
+
+    return directive == name;
+}
+
+
+void push_string(std::string& config, const std::string& line, const std::string& name)
+{
+	std::size_t first = line.find(name) + name.size();
+	
+	std::string directive_line = line.substr(first);
+
+	std::size_t end = directive_line.find_last_not_of(" \t\r\n");
+    if (end == std::string::npos || directive_line[end] != ';')
+        throw std::runtime_error("Error: missing final semicolon.");
+
+    if (end > 0 && directive_line[end - 1] == ';')
+        throw std::runtime_error("Error: multiple final semicolons.");
+	
+	std::size_t debut = directive_line.find_first_not_of(" \t");
+    
+	if (debut == std::string::npos || debut >= end)
+		throw std::runtime_error("Error: no " + name + " .");
+	
+	std::size_t last = directive_line.find_last_not_of(" \t;\r\n");
+	
+	std::string	directive = directive_line.substr(debut, last - debut + 1);
+	
+	if (directive.find(" ") != std::string::npos || directive.find("\t") != std::string::npos || directive.find(";") != std::string::npos)
+		throw std::runtime_error("Error: invalid " + name + " .");
+    
+	config = directive;
 }
 
 void push_listen(Config& config, const std::string& line)
@@ -161,17 +200,17 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 		}
 		if (server)
 		{
-			if (line.find("listen") != std::string::npos)
+			if (isDirective(line, "listen"))
 				push_listen(config, line);
-			else if (line.find("server_name") != std::string::npos)
-				push_server_name(config, line);
-			else if (line.find("root") != std::string::npos)
-				push_root(config, line);
-			else if (line.find("index") != std::string::npos)
-				push_index(config, line);
-			else if (line.find("client_max_body_size") != std::string::npos)
+			else if (isDirective(line, "server_name"))
+				push_string(config.server_name, line, "server_name");
+			else if (isDirective(line, "root"))
+				push_string(config.root, line, "root");
+			else if (isDirective(line, "index"))
+				push_string(config.index, line, "index");
+			else if (isDirective(line, "client_max_body_size"))
 				push_body_size(config, line);
-			else if (line.find("error") != std::string::npos)
+			else if (isDirective(line, "error"))
 				push_error(config, line);
 			else if (line.find("}") != std::string::npos)
 			{
