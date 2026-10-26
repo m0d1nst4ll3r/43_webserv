@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Config.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: leo <leo@student.42.fr>                    +#+  +:+       +#+        */
+/*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/22 18:45:26 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/23 20:25:52 by leo              ###   ########.fr       */
+/*   Updated: 2026/10/26 19:12:10 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,13 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+#include <iostream>
+#include <cctype>
+#include <limits>
+
 #include "LocationConfig.hpp"
 
 struct ListenAddress

@@ -6,7 +6,7 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:39:14 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/26 18:28:53 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/26 19:36:58 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,16 +71,16 @@ int main(int argc, char **argv)
                         << " -> " << it->second << std::endl;
             }
 
-            // for (std::size_t j = 0;
-            //      j < config.locations.size(); ++j)
-            // {
-            //     const LocationConfig &loc = config.locations[j];
+            for (std::size_t y = 0;
+                  y < config.locations.size(); ++y)
+            {
+                const LocationConfig &loc = config.locations[y];
 
-            //     std::cout << "\n  ----- LOCATION "
-            //               << j + 1 << " -----" << std::endl;
+                std::cout << "\n  ----- LOCATION "
+                          << y + 1 << " -----" << std::endl;
 
-            //     std::cout << "  Path : "
-            //               << loc.path << std::endl;
+                std::cout << "  Path : "
+                          << loc.path << std::endl;
             //     std::cout << "  Root : "
             //               << loc.root << std::endl;
             //     std::cout << "  Index : "
@@ -92,13 +92,13 @@ int main(int argc, char **argv)
             //               << (loc.uploadEnabled ? "on" : "off")
             //               << std::endl;
 
-            //     std::cout << "  Allowed methods : ";
-            //     for (std::size_t k = 0;
-            //          k < loc.allowedMethods.size(); ++k)
-            //     {
-            //         std::cout << loc.allowedMethods[k] << " ";
-            //     }
-            //     std::cout << std::endl;
+                std::cout << "  Allowed methods : ";
+                for (std::size_t k = 0;
+                     k < loc.allowedMethods.size(); ++k)
+                {
+                    std::cout << loc.allowedMethods[k] << " ";
+                }
+                std::cout << std::endl;
 
             //     std::cout << "  Upload store : "
             //               << loc.uploadStore << std::endl;
@@ -108,12 +108,12 @@ int main(int argc, char **argv)
             //               << loc.cgiExtension << std::endl;
             //     std::cout << "  CGI path : "
             //               << loc.cgiExecutable << std::endl;
-            // }
+            }
         }
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Erreur : " << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return 1;
     }
 

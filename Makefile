@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: leo <leo@student.42.fr>                    +#+  +:+       +#+         #
+#    By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/01/15 16:45:41 by rapohlen          #+#    #+#              #
-#    Updated: 2026/10/23 20:06:55 by leo              ###   ########.fr        #
+#    Updated: 2026/10/26 19:13:15 by ltourbe          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,7 +14,8 @@
 CFILES		=	main.cpp \
 				Config.cpp \
 				LocationConfig.cpp \
-				ConfigParser.cpp
+				ConfigParser.cpp \
+				LocationParser.cpp
 				
 SRCDIR		= src
 SRC			= $(addprefix $(SRCDIR)/, $(CFILES))

@@ -6,16 +6,9 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:46:25 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/26 18:31:55 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/26 19:59:26 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-#include <iostream>
-#include <cctype>
-#include <limits>
 
 #include <ConfigParser.hpp>
 
@@ -326,6 +319,7 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 
             location_config = LocationConfig();
             location = true;
+			push_location_path(location_config, clean_line);
             continue;
         }
 
@@ -345,16 +339,24 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 		
 		if (location)
 		{
-			// push_location_path(location_config, clean_line);
-			// push_allowed_methods(location_config, clean_line);
-			// push_autoindex(location_config, clean_line);
-			// push_index(location_config, clean_line);
-			// push_root(location_config, clean_line);
-			// push_upload_enabled(location_config, clean_line);
-			// push_upload_store(location_config, clean_line);
-			// push_redirect(location_config, clean_line);
-			// push_cgi_extension(location_config, clean_line);
-			// push_cgi_path(location_config, clean_line);
+			if (isDirective(clean_line, "allowed_methods"))
+				push_allowed_methods(location_config, clean_line);
+			// else if (isDirective(clean_line, "autoindex"))
+			// 	push_autoindex(location_config, clean_line);
+			// else if (isDirective(clean_line, "index"))
+			// 	push_index(location_config, clean_line);
+			// else if (isDirective(clean_line, "root"))
+			// 	push_root(location_config, clean_line);
+			// else if (isDirective(clean_line, "upload_enabled"))
+			// 	push_upload_enabled(location_config, clean_line);
+			// else if (isDirective(clean_line, "upload_store"))
+			// 	push_upload_store(location_config, clean_line);
+			// else if (isDirective(clean_line, "return"))
+			// 	push_redirect(location_config, clean_line);
+			// else if (isDirective(clean_line, "cgi_extension"))
+			// 	push_cgi_extension(location_config, clean_line);
+			// else if (isDirective(clean_line, "cgi_path"))
+			// 	push_cgi_path(location_config, clean_line);
 		}
 		else
 		{
