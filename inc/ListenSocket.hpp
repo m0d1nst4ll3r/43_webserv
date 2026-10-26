@@ -3,37 +3,39 @@
 
 #include "FileDescriptor.hpp"
 #include "EpollInstance.hpp"
+#include <string>
+#include <sys/socket.h>
 
-// Expected ListenSocket usage in WebServ:
+// ListenSocket lifecycle:
 //
 // 1. Instantiate one ListenSocket on startup per interface:port pair
-//    Directly set it to NONBLOCK and add its fd to epoll
+//    Directly set it to NONBLOCK and CLOEXEC and add its fd to epoll
 // 2. accept() once after epoll returns EPOLLIN
-// 3. Disable epoll if connection limit is reached, re-enable after slots are freed
+// 3. Disable epoll events if connection limit is reached, re-enable after slots are freed
 // 4. Close at exit
 
 class ListenSocket
 {
 	public:
 
-	// Construction opens new socket, binds it, sets it to listen, adds it to epoll
-	// Throws if any socket, bind, setsockopt, listen call fails
-	ListenSocket(int port, EpollInstance& epoll);
-	// Destruction closes socket
+	// Construction creates and binds socket, as well as adding it to epoll
+	ListenSocket(EpollInstance& epoll, const std::string& interface, int port);
 	~ListenSocket();
 
-	// Attempts accept(), will not block since SOCK_NONBLOCK was set, might still fail and throw
-	int accept();
+	// Socket methods
+	int accept(struct sockaddr* addr, socklen_t* addrlen);
 
-	// Unregister EPOLLIN from epoll, can throw
+	// Epoll methods
 	void disable();
-	// Register EPOLLIN to epoll, can throw
 	void enable();
+
+	// Getter
+	int	getFd();
 
 	private:
 
-	EpollInstance* _epoll;
-	FileDescriptor _sockfd;
+	EpollInstance*	_epoll;
+	FileDescriptor	_sockfd;
 };
 
 #endif /* LISTENSOCKET_HPP */

@@ -11,29 +11,6 @@
 #include <vector>
 #include <algorithm>
 
-volatile sig_atomic_t gServerRunning = 1;
-
-void	handleShutdownSignal(int sig)
-{
-	(void)sig;
-	gServerRunning = 0;
-}
-
-void	setupSigpipe()
-{
-	if (std::signal(SIGPIPE, SIG_IGN) == SIG_ERR)
-		throw std::runtime_error("signal failed: " + std::string(std::strerror(errno)));
-}
-
-void	setupShutdownSignals()
-{
-	if (signal(SIGINT, handleShutdownSignal) == SIG_ERR
-		|| signal(SIGTERM, handleShutdownSignal) == SIG_ERR
-		|| signal(SIGQUIT, handleShutdownSignal) == SIG_ERR
-		|| signal(SIGHUP, handleShutdownSignal) == SIG_ERR)
-		throw std::runtime_error("signal failed: " + std::string(std::strerror(errno)));
-}
-
 // Reply with generic header
 void	reply(int sockfd, const std::string& msg)
 {
@@ -63,11 +40,6 @@ void	reply(int sockfd, const std::string& msg)
 //        a. 
 void	webserv()
 {
-	setupSigpipe(); // can throw
-	setupShutdownSignals(); // can throw
-	EpollInstance				epoll; // can throw
-	ListenSocket				lsocket(8080, epoll); // can throw
-	std::vector<ClientSocket>	clientList;
 	while (gServerRunning)
 	{
 		int numSockets = epoll.wait(-1); // -1 blocks indefinitely, will change
@@ -101,13 +73,6 @@ void	webserv()
 
 			}
 		}
-		// 2. Accept whatever needs accepting and register to epoll (read event) if successful
-		// 3. For readable clients, recv (meaning, add to recv buffer)
-		//    + If recv buffer contains \r\n\r\n, build request
-		//    + If request expects body, continue reading for content-length
-		//    + If request is complete (nothing more to recv), register write event to epoll for this socket
-		// 4. For writeable clients (meaning we have data to send to them), send (call send and update buffer offset)
-		//    + If we have sent everything, unregister write event
 	}
 }
 

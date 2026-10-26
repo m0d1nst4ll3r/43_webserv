@@ -6,10 +6,10 @@
 #include "EpollInstance.hpp"
 #include <string>
 
-// Expected ClientSocket usage in WebServ:
+// ClientSocket lifecycle:
 //
 // 1. Instantiate new ClientSocket after epoll returned EPOLLIN on a ListenSocket
-//    Directly set it to NONBLOCK and add its fd to epoll
+//    Directly set it to NONBLOCK and CLOEXEC and add its fd to epoll
 // 2. recv() once after epoll returns EPOLLIN
 // 3. send() once after epoll returns EPOLLOUT
 // 4. Change registered event to EPOLLIN during READING, and EPOLLOUT during SENDING
@@ -19,28 +19,24 @@ class ClientSocket
 {
 	public:
 
-	// Constructed from a ListenSocket (can throw)
-	ClientSocket(ListenSocket& lsock, EpollInstance& epoll);
-	// Destruction closes socket
+	// Constructed from a ListenSocket accept()
+	ClientSocket(EpollInstance& epoll, ListenSocket& lsock);
 	~ClientSocket();
 
-	// Attempt to send or recv data through socket (can throw)
-	// Sending or receiving only calls send & recv ONCE per call
-	// If send or recv fail (0 or -1), they throw
+	// IO methods
 	size_t		send(const char* buf, size_t size);
 	std::string	recv();
-	// Sending returns how many bytes were sent
-	// Receiving returns received bytes in string form
 
-	// Change registered event to EPOLLIN (can throw)
+	// Epoll methods
 	void	setRecv();
-	// Change registered event to EPOLLOUT (can throw)
 	void	setSend();
 
 	private:
 
-	EpollInstance* _epoll;
-	FileDescriptor _sockfd;
+	EpollInstance*			_epoll;
+	FileDescriptor			_sockfd;
+	struct sockaddr_storage	_clientAddr; // Address of socket peer
+	socklen_t				_addrLen;
 };
 
 #endif /* CLIENTSOCKET_HPP */

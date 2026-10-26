@@ -44,8 +44,8 @@ class EpollInstance
 
 	private:
 
-	FileDescriptor _fd;
-	std::vector<struct epoll_event> _events;
+	FileDescriptor					_fd;
+	std::vector<struct epoll_event>	_events;
 };
 
 #endif /* EPOLLINSTANCE_HPP */

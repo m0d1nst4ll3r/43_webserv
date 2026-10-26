@@ -3,16 +3,12 @@
 
 class FileDescriptor
 {
-    public:
+	public:
 
-    FileDescriptor(int fd);
-    ~FileDescriptor();
+	const int fd;
 
-    int fd() const;
-
-    private:
-
-    const int _fd;
+	FileDescriptor(int fd);
+	~FileDescriptor();
 };
 
 #endif /* FILEDESCRIPTOR_HPP */
