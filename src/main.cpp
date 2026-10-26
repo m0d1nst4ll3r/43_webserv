@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: leo <leo@student.42.fr>                    +#+  +:+       +#+        */
+/*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:39:14 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/23 23:46:31 by leo              ###   ########.fr       */
+/*   Updated: 2026/10/26 18:28:53 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,16 @@ int main(int argc, char **argv)
             std::cout << "\n========== SERVER "
                       << i + 1 << " ==========" << std::endl;
 
+            for (std::size_t j = 0; j < configs[i].listens.size(); ++j)
+            {
+                std::cout << "IP : "
+                        << configs[i].listens[j].interface
+                        << std::endl;
+
+                std::cout << "Port : "
+                        << configs[i].listens[j].port
+                        << std::endl;
+            }
             std::cout << "Server name : "
                       << config.serverName << std::endl;
             std::cout << "Root : "
@@ -51,44 +61,54 @@ int main(int argc, char **argv)
             std::cout << "Nombre de locations : "
                       << config.locations.size() << std::endl;
 
-            for (std::size_t j = 0;
-                 j < config.locations.size(); ++j)
+            std::cout << "Error pages :" << std::endl;
+
+            for (std::map<int, std::string>::const_iterator it =
+                    config.errorPages.begin();
+                it != config.errorPages.end(); ++it)
             {
-                const LocationConfig &loc = config.locations[j];
-
-                std::cout << "\n  ----- LOCATION "
-                          << j + 1 << " -----" << std::endl;
-
-                std::cout << "  Path : "
-                          << loc.path << std::endl;
-                std::cout << "  Root : "
-                          << loc.root << std::endl;
-                std::cout << "  Index : "
-                          << loc.index << std::endl;
-                std::cout << "  Autoindex : "
-                          << (loc.autoindex ? "on" : "off")
-                          << std::endl;
-                std::cout << "  Upload enabled : "
-                          << (loc.uploadEnabled ? "on" : "off")
-                          << std::endl;
-
-                std::cout << "  Allowed methods : ";
-                for (std::size_t k = 0;
-                     k < loc.allowedMethods.size(); ++k)
-                {
-                    std::cout << loc.allowedMethods[k] << " ";
-                }
-                std::cout << std::endl;
-
-                std::cout << "  Upload store : "
-                          << loc.uploadStore << std::endl;
-                std::cout << "  Redirect : "
-                          << loc.redirect << std::endl;
-                std::cout << "  CGI extension : "
-                          << loc.cgiExtension << std::endl;
-                std::cout << "  CGI path : "
-                          << loc.cgiExecutable << std::endl;
+                std::cout << "  HTTP " << it->first
+                        << " -> " << it->second << std::endl;
             }
+
+            // for (std::size_t j = 0;
+            //      j < config.locations.size(); ++j)
+            // {
+            //     const LocationConfig &loc = config.locations[j];
+
+            //     std::cout << "\n  ----- LOCATION "
+            //               << j + 1 << " -----" << std::endl;
+
+            //     std::cout << "  Path : "
+            //               << loc.path << std::endl;
+            //     std::cout << "  Root : "
+            //               << loc.root << std::endl;
+            //     std::cout << "  Index : "
+            //               << loc.index << std::endl;
+            //     std::cout << "  Autoindex : "
+            //               << (loc.autoindex ? "on" : "off")
+            //               << std::endl;
+            //     std::cout << "  Upload enabled : "
+            //               << (loc.uploadEnabled ? "on" : "off")
+            //               << std::endl;
+
+            //     std::cout << "  Allowed methods : ";
+            //     for (std::size_t k = 0;
+            //          k < loc.allowedMethods.size(); ++k)
+            //     {
+            //         std::cout << loc.allowedMethods[k] << " ";
+            //     }
+            //     std::cout << std::endl;
+
+            //     std::cout << "  Upload store : "
+            //               << loc.uploadStore << std::endl;
+            //     std::cout << "  Redirect : "
+            //               << loc.redirect << std::endl;
+            //     std::cout << "  CGI extension : "
+            //               << loc.cgiExtension << std::endl;
+            //     std::cout << "  CGI path : "
+            //               << loc.cgiExecutable << std::endl;
+            // }
         }
     }
     catch (const std::exception &e)
