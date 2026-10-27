@@ -6,7 +6,7 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:39:14 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/26 19:36:58 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/27 17:52:46 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,16 +81,16 @@ int main(int argc, char **argv)
 
                 std::cout << "  Path : "
                           << loc.path << std::endl;
-            //     std::cout << "  Root : "
-            //               << loc.root << std::endl;
-            //     std::cout << "  Index : "
-            //               << loc.index << std::endl;
-            //     std::cout << "  Autoindex : "
-            //               << (loc.autoindex ? "on" : "off")
-            //               << std::endl;
-            //     std::cout << "  Upload enabled : "
-            //               << (loc.uploadEnabled ? "on" : "off")
-            //               << std::endl;
+                std::cout << "  Root : "
+                          << loc.root << std::endl;
+                std::cout << "  Index : "
+                          << loc.index << std::endl;
+                std::cout << "  Autoindex : "
+                          << (loc.autoindex ? "on" : "off")
+                          << std::endl;
+                std::cout << "  Upload enabled : "
+                          << (loc.uploadEnabled ? "on" : "off")
+                          << std::endl;
 
                 std::cout << "  Allowed methods : ";
                 for (std::size_t k = 0;
@@ -100,14 +100,16 @@ int main(int argc, char **argv)
                 }
                 std::cout << std::endl;
 
-            //     std::cout << "  Upload store : "
-            //               << loc.uploadStore << std::endl;
-            //     std::cout << "  Redirect : "
-            //               << loc.redirect << std::endl;
-            //     std::cout << "  CGI extension : "
-            //               << loc.cgiExtension << std::endl;
-            //     std::cout << "  CGI path : "
-            //               << loc.cgiExecutable << std::endl;
+                std::cout << "  Upload store : "
+                          << loc.uploadStore << std::endl;
+                std::cout << "  Redirect code : "
+                          << loc.redirectCode << std::endl;
+                std::cout << "  Redirect : "
+                          << loc.redirect << std::endl;
+                std::cout << "  CGI extension : "
+                          << loc.cgiExtension << std::endl;
+                std::cout << "  CGI path : "
+                          << loc.cgiExecutable << std::endl;
             }
         }
     }

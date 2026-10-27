@@ -6,7 +6,7 @@
 #    By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/01/15 16:45:41 by rapohlen          #+#    #+#              #
-#    Updated: 2026/10/26 19:13:15 by ltourbe          ###   ########.fr        #
+#    Updated: 2026/10/27 16:58:57 by ltourbe          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,8 @@ CFILES		=	main.cpp \
 				Config.cpp \
 				LocationConfig.cpp \
 				ConfigParser.cpp \
-				LocationParser.cpp
+				LocationParser.cpp \
+				Utils.cpp
 				
 SRCDIR		= src
 SRC			= $(addprefix $(SRCDIR)/, $(CFILES))

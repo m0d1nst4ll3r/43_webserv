@@ -6,7 +6,7 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/22 18:45:26 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/26 19:12:10 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/27 16:07:04 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@
 #include <iostream>
 #include <cctype>
 #include <limits>
+#include <algorithm>
 
 #include "LocationConfig.hpp"
 

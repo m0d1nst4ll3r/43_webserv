@@ -6,11 +6,12 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:46:25 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/26 19:59:26 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/27 19:38:52 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <ConfigParser.hpp>
+#include "ConfigParser.hpp"
+#include "Utils.hpp"
 
 ConfigParser::ConfigParser()
 {
@@ -43,6 +44,8 @@ bool isDirective(const std::string& line, const std::string& name)
 
 void push_error_page(Config& config, const std::string& line)
 {	
+	validate_semicolon(line, "error_page");
+	
 	std::istringstream stream(line);
 
     std::string directive;
@@ -58,9 +61,6 @@ void push_error_page(Config& config, const std::string& line)
 
     if (stream >> extra)
         throw std::runtime_error("Error: too many arguments in error_page.");
-
-    if (path.empty() || path[path.size() - 1] != ';')
-        throw std::runtime_error("Error: missing final semicolon.");
 
     path.erase(path.size() - 1);
 
@@ -98,10 +98,10 @@ void push_body_size(Config& config, const std::string& line)
 	std::size_t end = line.find_last_not_of(" \t\r\n");
     
 	if (end == std::string::npos || line[end] != ';')
-        throw std::runtime_error("Error: missing final semicolon.");
+        throw std::runtime_error("Error: body_size: missing final semicolon.");
 
     if (end > 0 && line[end - 1] == ';')
-		throw std::runtime_error("Error: multiple final semicolons.");
+		throw std::runtime_error("Error: body_size: multiple final semicolons.");
 
 	std::string value = line.substr(first, end - first);
 
@@ -145,37 +145,50 @@ void push_body_size(Config& config, const std::string& line)
 	config.maxBodySize = bodyValue * multiplier;
 }
 
-void push_string(std::string& config, const std::string& line, const std::string& name)
+void push_string(std::string& config, const std::string& line, const std::string& name, const std::string& where)
 {
-	std::size_t first = line.find(name) + name.size();
+	std::size_t first = line.find(name);
 	
-	std::string directive_line = line.substr(first);
+	if (first == std::string::npos)
+        throw std::runtime_error("Error: missing " + where + " " + name + ".");
+
+    first += name.size();
+    std::string directive_line = line.substr(first);
+
+    validate_semicolon(directive_line, name);
 
 	std::size_t end = directive_line.find_last_not_of(" \t\r\n");
-    if (end == std::string::npos || directive_line[end] != ';')
-        throw std::runtime_error("Error: missing final semicolon.");
+    
+	if (end == std::string::npos || directive_line[end] != ';')
+        throw std::runtime_error("Error: " + where + " " + name + ": missing final semicolon.");
 
-    if (end > 0 && directive_line[end - 1] == ';')
-		throw std::runtime_error("Error: multiple final semicolons.");
+	if (end != directive_line.size() - 1)
+		throw std::runtime_error("Error: " + where + " " + name + ": whitespace after semicolon.");
+
+    if (directive_line.find(';') != end)
+		throw std::runtime_error("Error: " + where + " " + name + ": multiple or misplaced semicolons.");
 
 	std::size_t debut = directive_line.find_first_not_of(" \t");
     
 	if (debut == std::string::npos || debut >= end)
-		throw std::runtime_error("Error: no " + name + ".");
-	
-	std::size_t last = directive_line.find_last_not_of(" \t;\r\n");
-	
-	std::string	directive = directive_line.substr(debut, last - debut + 1);
+		throw std::runtime_error("Error: no " + where + " " + name + ".");
+    
+    if (end > 0 && (directive_line[end - 1] == ' ' || directive_line[end - 1] == '\t'))
+		throw std::runtime_error("Error: " + where + " " + name + ": whitespace before semicolon.");
+
+	std::string	directive = directive_line.substr(debut, end - debut);
 	
 	if (directive.find(" ") != std::string::npos || directive.find("\t") != std::string::npos || directive.find(";") != std::string::npos)
-		throw std::runtime_error("Error: invalid " + name + ".");
+		throw std::runtime_error("Error: invalid " + where + " " + name + ".");
     
 	config = directive;
 }
 
 void push_listen(Config& config, const std::string& line)
 {
-    ListenAddress listen;
+    validate_semicolon(line, "listen");
+	
+	ListenAddress listen;
 
     std::size_t first;
     std::size_t i = 0;
@@ -247,9 +260,6 @@ void push_listen(Config& config, const std::string& line)
     std::size_t portStart = last + 1;
     std::size_t semicolon = line.find(';', portStart);
 
-    if (semicolon == std::string::npos)
-        throw std::runtime_error("Error: missing semicolon.");
-
     std::string port = line.substr(portStart, semicolon - portStart);
 
     if (port.empty())
@@ -274,7 +284,7 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 	std::ifstream file(filename.c_str());
     
 	if (!file.is_open())
-		throw std::runtime_error("Error: could not open database.");
+		throw std::runtime_error("Error: could not open configuration file.");
 
 	std::vector<Config> configs;
 
@@ -285,6 +295,9 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 	Config config;
 	LocationConfig location_config;
 	
+	std::set<std::string> serverDirectives;
+	std::set<std::string> locationDirectives;
+
 	while (std::getline(file, line))
 	{
 		std::size_t comment = line.find('#');
@@ -303,6 +316,7 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 
             config = Config();
             server = true;
+			serverDirectives.clear();
             continue;
         }
 		
@@ -319,6 +333,7 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 
             location_config = LocationConfig();
             location = true;
+			locationDirectives.clear();
 			push_location_path(location_config, clean_line);
             continue;
         }
@@ -340,38 +355,81 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 		if (location)
 		{
 			if (isDirective(clean_line, "allowed_methods"))
+			{
+				checkDuplicate(locationDirectives, "allowed_methods");
 				push_allowed_methods(location_config, clean_line);
-			// else if (isDirective(clean_line, "autoindex"))
-			// 	push_autoindex(location_config, clean_line);
-			// else if (isDirective(clean_line, "index"))
-			// 	push_index(location_config, clean_line);
-			// else if (isDirective(clean_line, "root"))
-			// 	push_root(location_config, clean_line);
-			// else if (isDirective(clean_line, "upload_enabled"))
-			// 	push_upload_enabled(location_config, clean_line);
-			// else if (isDirective(clean_line, "upload_store"))
-			// 	push_upload_store(location_config, clean_line);
-			// else if (isDirective(clean_line, "return"))
-			// 	push_redirect(location_config, clean_line);
-			// else if (isDirective(clean_line, "cgi_extension"))
-			// 	push_cgi_extension(location_config, clean_line);
-			// else if (isDirective(clean_line, "cgi_path"))
-			// 	push_cgi_path(location_config, clean_line);
+			}
+			else if (isDirective(clean_line, "autoindex"))
+			{
+				checkDuplicate(locationDirectives, "autoindex");
+				push_bool(location_config.autoindex, clean_line, "autoindex");
+			}
+			else if (isDirective(clean_line, "index"))
+			{
+				checkDuplicate(locationDirectives, "index");
+				push_string(location_config.index, clean_line, "index", "location");
+			}
+			else if (isDirective(clean_line, "root"))
+			{
+				checkDuplicate(locationDirectives, "root");
+				push_string(location_config.root, clean_line, "root", "location");
+			}
+			else if (isDirective(clean_line, "upload_enabled"))
+			{
+				checkDuplicate(locationDirectives, "upload_enabled");
+				push_bool(location_config.uploadEnabled, clean_line, "upload_enabled");
+			}
+			else if (isDirective(clean_line, "upload_store"))
+			{
+				checkDuplicate(locationDirectives, "upload_store");
+				push_string(location_config.uploadStore, clean_line, "upload_store", "location");
+			}
+			else if (isDirective(clean_line, "return"))
+			{
+				checkDuplicate(locationDirectives, "return");
+				push_redirect(location_config, clean_line);
+			}
+			else if (isDirective(clean_line, "cgi_extension"))
+			{
+				checkDuplicate(locationDirectives, "cgi_extension");
+				push_string(location_config.cgiExtension, clean_line, "cgi_extension", "location");
+			}
+			else if (isDirective(clean_line, "cgi_path"))
+			{
+				checkDuplicate(locationDirectives, "cgi_path");
+				push_string(location_config.cgiExecutable, clean_line, "cgi_path", "location");
+			}
+			else
+				throw std::runtime_error("Wrong location directive");
 		}
 		else
 		{
 			if (isDirective(clean_line, "listen"))
 				push_listen(config, clean_line);
 			else if (isDirective(clean_line, "server_name"))
-				push_string(config.serverName, clean_line, "server_name");
+			{
+				checkDuplicate(serverDirectives, "server_name");
+				push_string(config.serverName, clean_line, "server_name", "server");
+			}
 			else if (isDirective(clean_line, "root"))
-				push_string(config.root, clean_line, "root");
+			{
+				checkDuplicate(serverDirectives, "root");
+				push_string(config.root, clean_line, "root", "server");
+			}
 			else if (isDirective(clean_line, "index"))
-				push_string(config.index, clean_line, "index");
+			{
+				checkDuplicate(serverDirectives, "index");
+				push_string(config.index, clean_line, "index", "server");
+			}
 			else if (isDirective(clean_line, "client_max_body_size"))
+			{
+				checkDuplicate(serverDirectives, "client_max_body_size");
 				push_body_size(config, clean_line);
+			}
 			else if (isDirective(clean_line, "error_page"))
 				push_error_page(config, clean_line);
+			else
+				throw std::runtime_error("Wrong server directive");
 		}
 	}
 
