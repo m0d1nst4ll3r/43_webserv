@@ -36,7 +36,7 @@ class EpollInstance
 
 	private:
 
-	FileDescriptor					_fd;
+	FileDescriptor					_epollfd;
 	std::vector<struct epoll_event>	_events;
 };
 

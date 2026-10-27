@@ -2,8 +2,9 @@
 #include <ctime>
 #include <string>
 
-ClientSession::ClientSession(EpollInstance& epoll, ListenSocket& lsock)
-: _socket(epoll, lsock), _websiteConfig(), _serverConfig(), _cgiCall(),
+// WIP - No WebsiteConfig class yet
+ClientSession::ClientSession(ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock)
+: _socket(epoll, lsock), _serverConfig(&serverConfig), _cgiCall(),
 	_request(), _response(), _recvBuffer(), _sendBuffer(), _sendOffset(),
 	_state(READING_REQUEST), _lastActivity(std::time(0)), _delete(false)
 {

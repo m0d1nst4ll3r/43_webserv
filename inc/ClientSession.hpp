@@ -44,8 +44,8 @@ class ClientSession
 	public:
 
 	// WIP -> No WebsiteConfig class yet
-	//ClientSession(const WebsiteConfig& websiteConfig, const ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock);
-	ClientSession(const ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock);
+	//ClientSession(WebsiteConfig& websiteConfig, ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock);
+	ClientSession(ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock);
 	~ClientSession();
 
 	int getFd() const;
