@@ -31,12 +31,15 @@ class ClientSocket
 	void	setRecv();
 	void	setSend();
 
+	// Getter
+	int getFd() const;
+
 	private:
 
 	EpollInstance*			_epoll;
-	FileDescriptor			_sockfd;
 	struct sockaddr_storage	_clientAddr; // Address of socket peer
 	socklen_t				_addrLen;
+	FileDescriptor			_sockfd;
 };
 
 #endif /* CLIENTSOCKET_HPP */

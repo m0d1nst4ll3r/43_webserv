@@ -5,19 +5,11 @@
 #include <sys/epoll.h>
 #include <vector>
 
-// Expected epoll usage in WebServ:
+// EpollInstance lifecycle:
 //
-// 1. Create epoll instance at startup
-// 2. Always add sockets with EPOLLIN on creation
-// 3. Remove EPOLLIN from listen sockets on connection limit, re-add when slots free up
-// 4. Switch EPOLLIN to EPOLLOUT when client socket switches from READING state to SENDING
-// 5. Switch EPOLLOUT to EPOLLIN when client socket switches from SENDING state to READING
-// 6. Close epoll instance at exit
-//
-// Additionally, wait on every loop iteration and act on returned events:
-//  - EPOLLIN	accept() on listen socket or recv() on client socket
-//  - EPOLLOUT	send() on client socket
-//  - EPOLLHUP, EPOLLERR	close the socket
+// 1. Create epoll instance at startup, allowing epoll event registration
+// 2. Wait will be called in a loop by web server
+// 3. Close epoll instance at exit
 
 class EpollInstance
 {

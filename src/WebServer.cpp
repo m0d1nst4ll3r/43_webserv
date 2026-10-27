@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 #include <csignal>
+#include <stdexcept>
 
 namespace
 {
@@ -40,7 +41,7 @@ WebServer::WebServer(const std::string& configFile) : _epoll()
 	setupShutdownSignals();
 	// 3: LSOCKETS
 	ListenSocket*	lsocket = new ListenSocket(8080, _epoll);
-	_listenSockets[lsocket.getFd()] = lsocket;
+	_listenSockets[lsocket->getFd()] = lsocket;
 	std::vector<ClientSocket>	clientList;
 }
 
