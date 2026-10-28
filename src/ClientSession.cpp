@@ -3,13 +3,13 @@
 #include <string>
 
 // WIP - No WebsiteConfig class yet
-ClientSession::ClientSession(ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock)
-: _socket(epoll, lsock), _serverConfig(&serverConfig), _cgiCall(),
-	_request(), _response(), _recvBuffer(), _sendBuffer(), _sendOffset(),
-	_state(READING_REQUEST), _lastActivity(std::time(0)), _delete(false)
-{
-
-}
+ClientSession::ClientSession(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock)
+: IOChannel(serverConfig, epoll),
+	_webServer(webServer),
+	_socket(epoll, *this, lsock),
+	_state(READING_REQUEST),
+	_lastActivity(std::time(0))
+{}
 
 ClientSession::~ClientSession()
 {
@@ -24,4 +24,27 @@ ClientSession::~ClientSession()
 int	ClientSession::getFd() const
 {
 	return _socket.getFd();
+}
+
+// ListenSocket event handler:
+//
+// - EPOLLERR		Connection close -> set pendingDelete
+// - EPOLLHUP		-
+// - EPOLLRDHUP		/ (WIP)
+// - EPOLLIN		/
+// - EPOLLOUT		/
+void	ClientSession::handleEvent(uint32_t events)
+{
+	if (events & EPOLLIN)
+		;
+	else if (events & EPOLLOUT)
+		;
+	else
+		_pendingDelete = true;
+}
+
+void	ClientSession::checkTimers(std::time_t now)
+{
+	// WIP
+	(void)now;
 }

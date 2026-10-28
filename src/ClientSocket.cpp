@@ -14,14 +14,15 @@
 // Construct by calling accept() on listen socket
 // Also set new socket to O_NONBLOCK and O_CLOEXEC (accept4() is not an allowed function)
 // This might throw if ListenSocket has no pending connection, which is possible even with polling
-ClientSocket::ClientSocket(EpollInstance& epoll, ListenSocket& lsock)
-: _epoll(&epoll),  _clientAddr(), _addrLen(sizeof(_clientAddr)), _sockfd(lsock.accept(reinterpret_cast<sockaddr*>(&_clientAddr), &_addrLen))
+ClientSocket::ClientSocket(EpollInstance& epoll, ClientSession& clientSession, ListenSocket& lsock)
+: _epoll(&epoll), _clientSession(clientSession), _clientAddr(), _addrLen(sizeof(_clientAddr)),
+	_sockfd(lsock.accept(reinterpret_cast<sockaddr*>(&_clientAddr), &_addrLen))
 {
 	// Set socket to O_NONBLOCK O_CLOEXEC
 	if (fcntl(_sockfd.fd, F_SETFL, O_NONBLOCK | O_CLOEXEC))
 		throw std::runtime_error("fcntl failed: " + std::string(std::strerror(errno)));
 	// Add socket to epoll (can throw)
-	_epoll->add(_sockfd.fd, this, EPOLLIN);
+	_epoll->add(_sockfd.fd, &_clientSession, EPOLLIN);
 }
 
 ClientSocket::~ClientSocket()
@@ -46,7 +47,7 @@ size_t	ClientSocket::send(const char* buf, size_t size)
 // If recv() does not read at least one byte, throw to indicate failure (the connection should be closed)
 std::string	ClientSocket::recv()
 {
-	const size_t	bufsize = 16383; // 16 kB
+	const size_t	bufsize = 16383; // 16 kiB
 	char			buf[bufsize + 1];
 	ssize_t			ret;
 
@@ -60,13 +61,13 @@ std::string	ClientSocket::recv()
 // Change epoll events to reflect READING mode
 void	ClientSocket::setRecv()
 {
-	_epoll->mod(_sockfd.fd, this, EPOLLIN);
+	_epoll->mod(_sockfd.fd, &_clientSession, EPOLLIN);
 }
 
 // Change epoll events to reflect WRITING mode
 void	ClientSocket::setSend()
 {
-	_epoll->mod(_sockfd.fd, this, EPOLLOUT);
+	_epoll->mod(_sockfd.fd, &_clientSession, EPOLLOUT);
 }
 
 int	ClientSocket::getFd() const

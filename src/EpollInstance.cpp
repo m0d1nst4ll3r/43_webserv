@@ -1,10 +1,11 @@
 #include "EpollInstance.hpp"
-#include <sys/epoll.h>
 #include <stdexcept>
 #include <cstring>
 #include <cerrno>
+#include <sys/epoll.h> // epoll_create1, epoll_wait, epoll_ctl
+#include <cstdint> // uint32_t
 #include <string>
-#include <unistd.h>
+#include <vector>
 
 namespace
 {

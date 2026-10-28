@@ -1,14 +1,17 @@
 #ifndef CLIENTSESSION_HPP
 #define CLIENTSESSION_HPP
 
-#include "ClientSocket.hpp"
 #include "ServerConfig.hpp"
 #include "EpollInstance.hpp"
+#include "WebServer.hpp"
+#include "ListenSocket.hpp"
+#include "IOChannel.hpp"
+#include "ClientSocket.hpp"
 #include "CGICall.hpp"
 #include "HTTPRequest.hpp"
 #include "HTTPResponse.hpp"
-#include "ListenSocket.hpp"
 #include <ctime>
+#include <cstdint>
 
 typedef enum e_state
 {
@@ -38,23 +41,26 @@ typedef enum e_state
 // - The session's state
 //		- A session is either reading a request, writing to a CGI, reading from a CGI, or sending a response
 // - The session's last activity, so server can routinely cull inactive sessions
-// - A delete flag indicating whether the ClientSession should be culled by server routine
-class ClientSession
+class ClientSession : public IOChannel
 {
 	public:
 
 	// WIP -> No WebsiteConfig class yet
-	//ClientSession(WebsiteConfig& websiteConfig, ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock);
-	ClientSession(ServerConfig& serverConfig, EpollInstance& epoll, ListenSocket& lsock);
+	//ClientSession(const ServerConfig& serverConfig, const WebsiteConfig& websiteConfig, EpollInstance& epoll, ListenSocket& lsock);
+	ClientSession(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock);
 	~ClientSession();
 
+	// Getter
 	int getFd() const;
+
+	// IOChannel interface
+	virtual void	handleEvent(uint32_t events);
+	virtual void	checkTimers(std::time_t now);
 
 	private:
 
+	WebServer&			_webServer;
 	ClientSocket		_socket;
-//	WebsiteConfig*		_websiteConfig;
-	ServerConfig*		_serverConfig;
 	CGICall*			_cgiCall;
 	HTTPRequest*		_request;
 	HTTPResponse*		_response;
@@ -63,7 +69,6 @@ class ClientSession
 	size_t				_sendOffset;
 	ClientSessionState	_state;
 	std::time_t			_lastActivity;
-	bool				_delete;
 };
 
 #endif /* CLIENTSESSION_HPP */

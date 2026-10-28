@@ -1,10 +1,15 @@
 #ifndef LISTENSOCKET_HPP
 #define LISTENSOCKET_HPP
 
+#include "ServerConfig.hpp"
+#include "WebServer.hpp"
+#include "IOChannel.hpp"
 #include "FileDescriptor.hpp"
 #include "EpollInstance.hpp"
 #include <string>
 #include <sys/socket.h>
+#include <ctime>
+#include <cstdint>
 
 // ListenSocket lifecycle:
 //
@@ -14,12 +19,11 @@
 // 3. Disable epoll events if connection limit is reached, re-enable after slots are freed
 // 4. Close at exit
 
-class ListenSocket
+class ListenSocket : public IOChannel
 {
 	public:
 
-	// Construction creates and binds socket, as well as adding it to epoll
-	ListenSocket(EpollInstance& epoll, const std::string& interface, int port);
+	ListenSocket(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& webServer, const std::string& interface, int port);
 	~ListenSocket();
 
 	// Socket methods
@@ -32,9 +36,15 @@ class ListenSocket
 	// Getter
 	int	getFd();
 
+	// IOChannel interface
+	virtual void	handleEvent(uint32_t events);
+	virtual void	checkTimers(std::time_t now);
+
 	private:
 
-	EpollInstance*	_epoll;
+	WebServer&		_webServer;
+	std::string		_interface;
+	int				_port;
 	FileDescriptor	_sockfd;
 };
 

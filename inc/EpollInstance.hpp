@@ -4,6 +4,7 @@
 #include "FileDescriptor.hpp"
 #include <sys/epoll.h>
 #include <vector>
+#include <cstdint>
 
 // EpollInstance lifecycle:
 //

@@ -1,7 +1,10 @@
-#include "FileDescriptor.hpp"
 #include "ListenSocket.hpp"
+#include "ServerConfig.hpp"
+#include "IOChannel.hpp"
+#include "FileDescriptor.hpp"
 #include "EpollInstance.hpp"
-#include <string>
+#include "ClientSession.hpp"
+#include "Color.hpp"
 #include <stdexcept>
 #include <cerrno>
 #include <cstring> // strerror
@@ -10,7 +13,11 @@
 #include <sys/types.h> // socket, bind, listen, setsockopt
 #include <netdb.h> // getaddrinfo, freeaddrinfo, gai_strerror
 #include <unistd.h> // close
+#include <cstdint> // uint32_t
 #include <sstream> // convert int port to string
+#include <string>
+#include <iostream>
+#include <ctime>
 
 namespace
 {
@@ -35,9 +42,8 @@ namespace
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV; // Intended for binding & passing port as number
 
 		// 2. Resolve addresses
-		const char* node = interfaceStr.empty() ? NULL : interfaceStr.c_str();
 		std::string	portStr = toString(port);
-		ret = getaddrinfo(node, portStr.c_str(), &hints, &res);
+		ret = getaddrinfo(interfaceStr.c_str(), portStr.c_str(), &hints, &res);
 		if (ret)
 			throw std::runtime_error("getaddrinfo failed: " + std::string(gai_strerror(ret)));
 
@@ -55,11 +61,12 @@ namespace
 			}
 			cur = cur->ai_next;
 		}
-		if (!cur) // No bindable address found, throw
-			throw std::runtime_error("cannot bind socket to '" + interfaceStr + portStr);
 
 		// Free res linked list
 		freeaddrinfo(res);
+
+		if (!cur) // No bindable address found, throw
+			throw std::runtime_error("cannot bind socket to '" + (interfaceStr.empty() ? "0.0.0.0" : interfaceStr) + ":" + portStr);
 
 		return fd;
 	}
@@ -78,16 +85,22 @@ namespace
 	}
 }
 
-ListenSocket::ListenSocket(EpollInstance& epoll, const std::string& interface, int port) : _epoll(&epoll), _sockfd(createSocket(port, interface))
+//ListenSocket::ListenSocket(const ServerConfig& serverConfig, const WebsiteConfig& websiteConfig, EpollInstance& epoll, const std::string& interface, int port);
+ListenSocket::ListenSocket(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& WebServer, const std::string& interface, int port)
+: IOChannel(serverConfig, epoll),
+	_webServer(WebServer),
+	_interface(interface.empty() ? "0.0.0.0" : interface),
+	_port(port),
+	_sockfd(createSocket(port, interface))
 {
 	setSocketReuse(_sockfd.fd); // Set SO_REUSEADDR to avoid "Address already in use" errors
 	setSocketListen(_sockfd.fd);
-	_epoll->add(_sockfd.fd, this, EPOLLIN); // Add socket to epoll, can throw
+	_epoll.add(_sockfd.fd, this, EPOLLIN); // Add socket to epoll, can throw
 }
 
 ListenSocket::~ListenSocket()
 {
-	_epoll->del(_sockfd.fd);
+	_epoll.del(_sockfd.fd);
 }
 
 // Make sure socket is polled before calling, or call will throw with EAGAIN or EWOULDBLOCK
@@ -103,15 +116,49 @@ int ListenSocket::accept(struct sockaddr* addr, socklen_t* addrlen)
 
 void ListenSocket::disable()
 {
-	_epoll->mod(_sockfd.fd, this, 0);
+	_epoll.mod(_sockfd.fd, this, 0);
 }
 
 void ListenSocket::enable()
 {
-	_epoll->mod(_sockfd.fd, this, EPOLLIN);
+	_epoll.mod(_sockfd.fd, this, EPOLLIN);
 }
 
 int	ListenSocket::getFd()
 {
 	return _sockfd.fd;
+}
+
+// ListenSocket event handler:
+//
+// - EPOLLERR		Throw with descriptive error, server should abort
+// - EPOLLHUP		-
+// - EPOLLRDHUP		-
+// - EPOLLIN		Create new ClientSession
+void	ListenSocket::handleEvent(uint32_t events)
+{
+	if (events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
+	{
+		std::stringstream ss;
+		ss << _port;
+		throw std::runtime_error("unexpected error on " + _interface + ":" + ss.str() + " socket");
+	}
+	if (events & EPOLLIN)
+	{
+		try
+		{
+			ClientSession* client = new ClientSession(_serverConfig, _epoll, _webServer, *this);
+			_webServer.addNewClient(client);
+		}
+		catch(const std::exception& e)
+		{ // Log error, but do nothing else
+			std::cerr << Color::YELLOW << "Warning" << Color::RESET << ": ClientSession init failed: " << e.what() << "\n";
+		}
+	}
+}
+
+// Nothing to do - listen sockets are persistent
+void		ListenSocket::checkTimers(std::time_t now)
+{
+	(void)now;
 }

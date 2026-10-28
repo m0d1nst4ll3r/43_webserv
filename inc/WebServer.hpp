@@ -3,10 +3,10 @@
 
 #include "ServerConfig.hpp"
 #include "EpollInstance.hpp"
+#include "IOChannel.hpp"
 #include "ListenSocket.hpp"
-#include "ClientSession.hpp"
 #include <string>
-#include <map>
+#include <vector>
 
 class WebServer
 {
@@ -18,15 +18,18 @@ class WebServer
 	// Run server loop
 	void	run();
 
+	void	addNewClient(IOChannel* client);
+	void	addNewCGI(IOChannel* cgi);
+
 	private:
 
-	ServerConfig					_serverConfig;
+	const ServerConfig				_serverConfig;
 	//WebsiteConfig					_websiteConfig; // WIP - No Config yet
 	EpollInstance					_epoll;
-	std::map<int, ListenSocket*>	_listenSockets;
-	std::map<int, ClientSession*>	_clientSessions;
-	std::map<int, ClientSession*>	_cgiPipesIn;
-	std::map<int, ClientSession*>	_cgiPipesOut;
+	std::vector<IOChannel*>			_ioChannels;
+	std::vector<ListenSocket*>		_lsocks;
+	int								_numClients;
+	bool							_listening;
 };
 
 #endif /* WEBSERVER_HPP */

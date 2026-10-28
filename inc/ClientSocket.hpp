@@ -3,7 +3,9 @@
 
 #include "FileDescriptor.hpp"
 #include "ListenSocket.hpp"
+#include "ClientSession.hpp"
 #include "EpollInstance.hpp"
+#include "IOChannel.hpp"
 #include <string>
 
 // ClientSocket lifecycle:
@@ -20,7 +22,7 @@ class ClientSocket
 	public:
 
 	// Constructed from a ListenSocket accept()
-	ClientSocket(EpollInstance& epoll, ListenSocket& lsock);
+	ClientSocket(EpollInstance& epoll, ClientSession& clientSession, ListenSocket& lsock);
 	~ClientSocket();
 
 	// IO methods
@@ -37,6 +39,7 @@ class ClientSocket
 	private:
 
 	EpollInstance*			_epoll;
+	ClientSession&			_clientSession;
 	struct sockaddr_storage	_clientAddr; // Address of socket peer
 	socklen_t				_addrLen;
 	FileDescriptor			_sockfd;

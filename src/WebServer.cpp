@@ -1,9 +1,16 @@
 #include "WebServer.hpp"
+#include "Color.hpp"
+#include "EpollInstance.hpp"
+#include "IOChannel.hpp"
+#include "ListenSocket.hpp"
 #include <cerrno>
 #include <cstring>
 #include <string>
 #include <csignal>
 #include <stdexcept>
+#include <iostream>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -32,69 +39,71 @@ namespace
 }
 
 
-WebServer::WebServer(const std::string& configFile) : _epoll()
+WebServer::WebServer(const std::string& configFile)
+: _listening(true)
 {
-	// 1: CONFIG (will be in initializer list later)
+	// 1: Config (will be in initializer list later)
 	(void)configFile; // Ignoring for now
-	// 2: SIGNALS
+	// 2: Signals
 	setupSigpipe();
 	setupShutdownSignals();
-	// 3: LSOCKETS
-	ListenSocket*	lsocket = new ListenSocket(8080, _epoll);
-	_listenSockets[lsocket->getFd()] = lsocket;
-	std::vector<ClientSocket>	clientList;
+	// 3: ListenSockets (only one for now)
+	ListenSocket*	lsocket = new ListenSocket(_serverConfig, _epoll, *this, "localhost", 8080);
+	_ioChannels.push_back(lsocket);
+	_lsocks.push_back(lsocket);
 }
 
+// Clear open lsockets and csockets (and their associated CGI)
 WebServer::~WebServer()
 {
+	for (std::vector<IOChannel*>::iterator it = _ioChannels.begin(); it != _ioChannels.end(); ++it)
+		delete *it;
 }
 
-// No config yet
-// 1. SERVER INIT
-//   A. Init config (once we have it)
-//   B. Init signal
-//   C. Init epoll
-//   D. Init lsockets (only one without config, arbitrary interface:port)
-// 2. SERVER LOOP
-//   A. Wait (for now, no timeout)
-//   B. Loop over all returned sockets
-//     - Identify socket type
-//     - Act depending on event and socket type
-//        a. 
 void	WebServer::run()
 {
 	while (gServerRunning)
 	{
-		int numSockets = _epoll.wait(-1); // -1 blocks indefinitely, will change
+		// 1. Wait
+		int numSockets = _epoll.wait(1000); // 1s timeout
+		// 2. Handle all events
 		for (int i = 0; i < numSockets; ++i)
+			reinterpret_cast<IOChannel*>(_epoll[i].data.ptr)->handleEvent(_epoll[i].events);
+		// 3. Check connection number
+		if (_listening && _numClients >= _serverConfig.maxConnections)
 		{
-			// Check if ListenSocket or ClientSocket
-			// Easy for now since we have 1 ListenSocket
-			// Later on, we will have to do a search on our ListenSocket container
-			if (_epoll[i].data.ptr == &lsocket) // if ListenSocket
+			_listening = false;
+			for (std::vector<ListenSocket*>::iterator it = _lsocks.begin(); it != _lsocks.end(); ++it)
+				(*it)->disable();
+		}
+		else if (!_listening && _numClients < _serverConfig.maxConnections)
+		{
+			_listening = true;
+			for (std::vector<ListenSocket*>::iterator it = _lsocks.begin(); it != _lsocks.end(); ++it)
+				(*it)->enable();
+		}
+		// 4. Check all session timers
+		for (std::vector<IOChannel*>::iterator it = _ioChannels.begin(); it != _ioChannels.end(); ++it)
+			(*it)->checkTimers(std::time(0));
+		// 5. Execute pending deletions
+		for (std::vector<IOChannel*>::iterator it = _ioChannels.begin(); it != _ioChannels.end(); ++it)
+		{
+			if ((*it)->pendingDelete())
 			{
-				// Check type of event
-				if (_epoll[i].events & EPOLLHUP || epoll[i].events & EPOLLERR) // HUP or ERR = abort everything for now
-					throw std::runtime_error("interface socket closed unexpectedly");
-				else if (epoll[i].events & EPOLLIN) // something to accept
-				{
-					try
-					{
-						clientList.push_back(ClientSocket(lsocket, epoll));
-					}
-					catch(const std::exception& e) // Logging for now, might remove or depend on a define
-					{
-						std::cerr << Color::YELLOW << "Warning" << Color::RESET << ": " << e.what() << '\n';
-					}
-					
-				}
-				// EPOLLRDHUP not handled yet
-			}
-			else // if ClientSocket
-			{
-				if (_epoll[i].events & EPOLLHUP || epoll[i].events & EPOLLERR) // HUP or ERR = close
-
+				delete *it;
+				_ioChannels.erase(it);
 			}
 		}
 	}
+}
+
+void	WebServer::addNewClient(IOChannel* client)
+{
+	_ioChannels.push_back(client);
+	_numClients++;
+}
+
+void	WebServer::addNewCGI(IOChannel* cgi)
+{
+	_ioChannels.push_back(cgi);
 }

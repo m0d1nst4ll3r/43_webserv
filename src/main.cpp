@@ -1,5 +1,6 @@
 #include "WebServer.hpp"
 #include "Color.hpp"
+#include <string>
 #include <iostream>
 
 int	main(int argc, char **argv)
@@ -7,7 +8,7 @@ int	main(int argc, char **argv)
 	(void)argc;
 	try
 	{
-		WebServer	webServ(argv[1]);
+		WebServer webServ(std::string(argv[1]));
 		webServ.run();
 	}
 	catch(const std::exception& e)
