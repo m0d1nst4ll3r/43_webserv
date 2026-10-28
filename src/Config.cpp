@@ -6,14 +6,14 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:34:40 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/23 16:35:38 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/28 18:48:57 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Config.hpp"
 
 Config::Config()
-	: maxBodySize(0)
+	: maxBodySize(10 * 1024 * 1024)
 {
 }
 

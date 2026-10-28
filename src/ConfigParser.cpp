@@ -6,7 +6,7 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:46:25 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/27 19:38:52 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/28 19:04:49 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,24 +22,24 @@ ConfigParser::~ConfigParser()
 }
 std::string trim(const std::string& str)
 {
-    std::size_t first = str.find_first_not_of(" \t\r\n");
+	std::size_t first = str.find_first_not_of(" \t\r\n");
 
-    if (first == std::string::npos)
-        return "";
+	if (first == std::string::npos)
+		return "";
 
-    std::size_t last = str.find_last_not_of(" \t\r\n");
+	std::size_t last = str.find_last_not_of(" \t\r\n");
 
-    return str.substr(first, last - first + 1);
+	return str.substr(first, last - first + 1);
 }
 
 bool isDirective(const std::string& line, const std::string& name)
 {
-    std::istringstream stream(line);
-    std::string directive;
+	std::istringstream stream(line);
+	std::string directive;
 
-    stream >> directive;
+	stream >> directive;
 
-    return directive == name;
+	return directive == name;
 }
 
 void push_error_page(Config& config, const std::string& line)
@@ -48,99 +48,108 @@ void push_error_page(Config& config, const std::string& line)
 	
 	std::istringstream stream(line);
 
-    std::string directive;
-    std::string codeStr;
-    std::string path;
-    std::string extra;
+	std::string directive;
+	std::string codeStr;
+	std::string path;
+	std::string extra;
 
-    if (!(stream >> directive >> codeStr >> path))
-        throw std::runtime_error("Error: invalid error_page directive.");
+	if (!(stream >> directive >> codeStr >> path))
+		throw std::runtime_error("Error: invalid error_page directive.");
 
-    if (directive != "error_page")
-        throw std::runtime_error("Error: invalid error_page directive.");
+	if (directive != "error_page")
+		throw std::runtime_error("Error: invalid error_page directive.");
 
-    if (stream >> extra)
-        throw std::runtime_error("Error: too many arguments in error_page.");
+	if (stream >> extra)
+		throw std::runtime_error("Error: too many arguments in error_page.");
 
-    path.erase(path.size() - 1);
+	path.erase(path.size() - 1);
 
-    if (path.empty())
-        throw std::runtime_error("Error: missing error page path.");
+	if (path.empty())
+		throw std::runtime_error("Error: missing error page path.");
 
-    if (codeStr.empty())
-        throw std::runtime_error("Error: missing HTTP status code.");
+	if (codeStr.empty())
+		throw std::runtime_error("Error: missing HTTP status code.");
 
-    for (std::size_t i = 0; i < codeStr.size(); ++i)
-    {
-        if (!std::isdigit(static_cast<unsigned char>(codeStr[i])))
-            throw std::runtime_error("Error: invalid HTTP status code.");
-    }
+	for (std::size_t i = 0; i < codeStr.size(); ++i)
+	{
+		if (!std::isdigit(static_cast<unsigned char>(codeStr[i])))
+			throw std::runtime_error("Error: invalid HTTP status code.");
+	}
 
-    std::istringstream codeStream(codeStr);
-    int code;
+	std::istringstream codeStream(codeStr);
+	int code;
 
-    if (!(codeStream >> code) || code < 100 || code > 599)
-        throw std::runtime_error("Error: invalid HTTP status code.");
+	if (!(codeStream >> code) || code < 100 || code > 599)
+		throw std::runtime_error("Error: invalid HTTP status code.");
 
-    if (config.errorPages.find(code) != config.errorPages.end())
-        throw std::runtime_error("Error: duplicate error_page code.");
+	if (config.errorPages.find(code) != config.errorPages.end())
+		throw std::runtime_error("Error: duplicate error_page code.");
 
-    config.errorPages[code] = path;
+	config.errorPages[code] = path;
 }
 
 void push_body_size(Config& config, const std::string& line)
 {
-	std::size_t first = line.find_first_of("0123456789");
+	validate_semicolon(line, "client_max_body_size");
 
-    if (first == std::string::npos)
-		throw std::runtime_error("Error: invalid body size.");
-	
-	std::size_t end = line.find_last_not_of(" \t\r\n");
-    
-	if (end == std::string::npos || line[end] != ';')
-        throw std::runtime_error("Error: body_size: missing final semicolon.");
+	std::istringstream stream(line);
+	std::string directive;
+	std::string value;
+	std::string extra;
 
-    if (end > 0 && line[end - 1] == ';')
-		throw std::runtime_error("Error: body_size: multiple final semicolons.");
+	if (!(stream >> directive >> value))
+		throw std::runtime_error("Error: invalid client_max_body_size directive.");
 
-	std::string value = line.substr(first, end - first);
+	if (directive != "client_max_body_size")
+		throw std::runtime_error("Error: invalid client_max_body_size directive.");
 
-    unsigned long multiplier = 1;
+	if (stream >> extra)
+		throw std::runtime_error("Error: too many arguments in client_max_body_size.");
 
+	value.erase(value.size() - 1);
+
+	if (value.empty())
+		throw std::runtime_error("Error: missing body size.");
+
+	unsigned long multiplier = 1;
 	char suffix = value[value.size() - 1];
 
 	if (suffix == 'K' || suffix == 'k')
-    {
-        multiplier = 1024UL;
-        value.erase(value.size() - 1);
-    }
-    else if (suffix == 'M' || suffix == 'm')
-    {
-        multiplier = 1024UL * 1024UL;
-        value.erase(value.size() - 1);
-    }
-    else if (suffix == 'G' || suffix == 'g')
-    {
-        multiplier = 1024UL * 1024UL * 1024UL;
-        value.erase(value.size() - 1);
-    }
-	
-	if (value.empty())
-        throw std::runtime_error("Error: invalid body size.");
+	{
+		multiplier = 1024UL;
+		value.erase(value.size() - 1);
+	}
+	else if (suffix == 'M' || suffix == 'm')
+	{
+		multiplier = 1024UL * 1024UL;
+		value.erase(value.size() - 1);
+	}
+	else if (suffix == 'G' || suffix == 'g')
+	{
+		multiplier = 1024UL * 1024UL * 1024UL;
+		value.erase(value.size() - 1);
+	}
 
-    for (std::size_t i = 0; i < value.size(); ++i)
-    {
-        if (!std::isdigit(static_cast<unsigned char>(value[i])))
-            throw std::runtime_error("Error: invalid body size.");
-    }
-	
-	std::stringstream bodyStream(value);
-	unsigned long bodyValue;
-	
-	if (!(bodyStream >> bodyValue))
-        throw std::runtime_error("Error: invalid body size.");
+	if (value.empty())
+		throw std::runtime_error("Error: invalid body size.");
+
+	unsigned long bodyValue = 0;
+
+	for (std::size_t i = 0; i < value.size(); ++i)
+	{
+		if (!std::isdigit(static_cast<unsigned char>(value[i])))
+			throw std::runtime_error("Error: invalid body size.");
+
+		unsigned int digit = value[i] - '0';
+
+		if (bodyValue > (std::numeric_limits<unsigned long>::max() - digit) / 10)
+			throw std::runtime_error("Error: body size too large.");
+
+		bodyValue = bodyValue * 10 + digit;
+	}
+
 	if (bodyValue > std::numeric_limits<unsigned long>::max() / multiplier)
-        throw std::runtime_error("Error: body size too large.");
+		throw std::runtime_error("Error: body size too large.");
 
 	config.maxBodySize = bodyValue * multiplier;
 }
@@ -150,139 +159,135 @@ void push_string(std::string& config, const std::string& line, const std::string
 	std::size_t first = line.find(name);
 	
 	if (first == std::string::npos)
-        throw std::runtime_error("Error: missing " + where + " " + name + ".");
+		throw std::runtime_error("Error: missing " + where + " " + name + ".");
 
-    first += name.size();
-    std::string directive_line = line.substr(first);
+	first += name.size();
+	std::string directive_line = line.substr(first);
 
-    validate_semicolon(directive_line, name);
+	validate_semicolon(directive_line, name);
 
 	std::size_t end = directive_line.find_last_not_of(" \t\r\n");
-    
+	
 	if (end == std::string::npos || directive_line[end] != ';')
-        throw std::runtime_error("Error: " + where + " " + name + ": missing final semicolon.");
+		throw std::runtime_error("Error: " + where + " " + name + ": missing final semicolon.");
 
 	if (end != directive_line.size() - 1)
 		throw std::runtime_error("Error: " + where + " " + name + ": whitespace after semicolon.");
 
-    if (directive_line.find(';') != end)
+	if (directive_line.find(';') != end)
 		throw std::runtime_error("Error: " + where + " " + name + ": multiple or misplaced semicolons.");
 
 	std::size_t debut = directive_line.find_first_not_of(" \t");
-    
+	
 	if (debut == std::string::npos || debut >= end)
 		throw std::runtime_error("Error: no " + where + " " + name + ".");
-    
-    if (end > 0 && (directive_line[end - 1] == ' ' || directive_line[end - 1] == '\t'))
+	
+	if (end > 0 && (directive_line[end - 1] == ' ' || directive_line[end - 1] == '\t'))
 		throw std::runtime_error("Error: " + where + " " + name + ": whitespace before semicolon.");
 
 	std::string	directive = directive_line.substr(debut, end - debut);
 	
 	if (directive.find(" ") != std::string::npos || directive.find("\t") != std::string::npos || directive.find(";") != std::string::npos)
 		throw std::runtime_error("Error: invalid " + where + " " + name + ".");
-    
+	
 	config = directive;
 }
 
 void push_listen(Config& config, const std::string& line)
 {
-    validate_semicolon(line, "listen");
-	
+	validate_semicolon(line, "listen");
+
 	ListenAddress listen;
 
-    std::size_t first;
-    std::size_t i = 0;
+	std::string value = line.substr(0, line.size() - 1);
 
-    for (; i < line.size(); i++)
-    {
-        if (std::isdigit(static_cast<unsigned char>(line[i])))
-        {
-            first = i;
-            break;
-        }
-    }
+	std::size_t start = value.find_first_not_of(" \t");
+	std::size_t addressStart = value.find_first_of(" \t", start);
 
-    if (i == line.size())
-        throw std::runtime_error("Error: wrong listen format.");
+	if (addressStart == std::string::npos)
+		throw std::runtime_error("Error: missing interface and port.");
 
-    std::size_t last = line.find(':', first);
-    if (last == std::string::npos || last == first)
-        throw std::runtime_error("Error: wrong listen format.");
+	addressStart = value.find_first_not_of(" \t", addressStart);
 
-    std::string interface = line.substr(first, last - first);
+	if (addressStart == std::string::npos)
+		throw std::runtime_error("Error: missing interface and port.");
 
-    int points = 0;
-    for (std::string::size_type n = 0; n < interface.size(); n++)
-    {
-        if (!std::isdigit(static_cast<unsigned char>(interface[n]))
-            && interface[n] != '.')
-            throw std::runtime_error("Error: wrong character in the interface.");
+	std::size_t colon = value.find(':', addressStart);
 
-        if (interface[n] == '.')
-        {
-            if (n == 0 || n == interface.size() - 1)
-                throw std::runtime_error("Error: wrong interface format.");
+	if (colon == std::string::npos || colon == addressStart)
+		throw std::runtime_error("Error: wrong listen format.");
 
-            if (!std::isdigit(static_cast<unsigned char>(interface[n - 1]))
-                || !std::isdigit(static_cast<unsigned char>(interface[n + 1])))
-                throw std::runtime_error("Error: wrong interface format.");
+	std::string interface = value.substr(addressStart, colon - addressStart);
+	std::string port = value.substr(colon + 1);
 
-            points++;
-        }
-    }
+	if (port.empty())
+		throw std::runtime_error("Error: missing port.");
 
-    if (points != 3)
-        throw std::runtime_error("Error: wrong interface format.");
+	int count = 0;
+	std::size_t octetStart = 0;
 
-    std::stringstream ipStream(interface);
-    std::string octet;
-    int octetValue;
-    int count = 0;
+	while (octetStart <= interface.size())
+	{
+		std::size_t dot = interface.find('.', octetStart);
+		std::string octet = interface.substr(octetStart,
+			dot == std::string::npos ? std::string::npos : dot - octetStart);
 
-    while (std::getline(ipStream, octet, '.'))
-    {
-        std::stringstream octetStream(octet);
-        char extra;
+		if (octet.empty() || octet.size() > 3)
+			throw std::runtime_error("Error: invalid IP octet.");
 
-        if (octet.empty() || !(octetStream >> octetValue) || (octetStream >> extra))
-            throw std::runtime_error("Error: invalid IP octet.");
+		if (octet.size() > 1 && octet[0] == '0')
+			throw std::runtime_error("Error: leading zeros in IP octet.");
+		
+		int octetValue = 0;
 
-        if (octetValue < 0 || octetValue > 255)
-            throw std::runtime_error("Error: IP octet out of range.");
-        count++;
-    }
+		for (std::size_t i = 0; i < octet.size(); ++i)
+		{
+			if (!std::isdigit(static_cast<unsigned char>(octet[i])))
+				throw std::runtime_error("Error: invalid IP octet.");
 
-    if (count != 4)
-        throw std::runtime_error("Error: wrong interface format.");
+			octetValue = octetValue * 10 + (octet[i] - '0');
+		}
 
-    listen.interface = interface;
+		if (octetValue > 255)
+			throw std::runtime_error("Error: IP octet out of range.");
 
-    std::size_t portStart = last + 1;
-    std::size_t semicolon = line.find(';', portStart);
+		++count;
 
-    std::string port = line.substr(portStart, semicolon - portStart);
+		if (dot == std::string::npos)
+			break;
 
-    if (port.empty())
-        throw std::runtime_error("Error: missing port.");
+		octetStart = dot + 1;
+	}
 
-    std::stringstream portStream(port);
-    int truePort;
-    char extra;
+	if (count != 4)
+		throw std::runtime_error("Error: wrong interface format.");
 
-    if (!(portStream >> truePort) || (portStream >> extra))
-        throw std::runtime_error("Error: wrong port format.");
+	int truePort = 0;
 
-    if (truePort < 1 || truePort > 65535)
-        throw std::runtime_error("Error: wrong port value.");
+	for (std::size_t i = 0; i < port.size(); ++i)
+	{
+		if (!std::isdigit(static_cast<unsigned char>(port[i])))
+			throw std::runtime_error("Error: wrong port format.");
 
-    listen.port = truePort;
-    config.listens.push_back(listen);
+		truePort = truePort * 10 + (port[i] - '0');
+
+		if (truePort > 65535)
+			throw std::runtime_error("Error: wrong port value.");
+	}
+
+	if (truePort < 1)
+		throw std::runtime_error("Error: wrong port value.");
+
+	listen.interface = interface;
+	listen.port = truePort;
+
+	config.listens.push_back(listen);
 }
 
 std::vector<Config> ConfigParser::parse(const std::string& filename)
 {
 	std::ifstream file(filename.c_str());
-    
+	
 	if (!file.is_open())
 		throw std::runtime_error("Error: could not open configuration file.");
 
@@ -301,7 +306,7 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 	while (std::getline(file, line))
 	{
 		std::size_t comment = line.find('#');
-        if (comment != std::string::npos)
+		if (comment != std::string::npos)
 			line = line.substr(0, comment);
 
 		std::string clean_line = trim(line);
@@ -310,47 +315,56 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 			continue;
 		
 		if (clean_line == "server {")
-        {
-            if (server || location)
+		{
+			if (server || location)
 				throw std::runtime_error("Error: unexpected server block.");
 
-            config = Config();
-            server = true;
+			config = Config();
+			server = true;
 			serverDirectives.clear();
-            continue;
-        }
+			continue;
+		}
 		
 		if (!server)
 			throw std::runtime_error("Error: directive outside server block.");
 
 		if (clean_line.compare(0, 9, "location ") == 0)
-        {
-            if (location)
+		{
+			if (location)
 				throw std::runtime_error("Error: nested location block.");
 
-            if (clean_line[clean_line.size() - 1] != '{')
+			if (clean_line[clean_line.size() - 1] != '{')
 				throw std::runtime_error("Error: invalid location block.");
 
-            location_config = LocationConfig();
-            location = true;
-			locationDirectives.clear();
+			location_config = LocationConfig();
 			push_location_path(location_config, clean_line);
-            continue;
-        }
 
-		 if (clean_line == "}")
-        {
-            if (location)
-            {
-                config.locations.push_back(location_config);
-                location = false;
-                continue;
-            }
+			for (std::size_t i = 0; i < config.locations.size(); ++i)
+			{
+				if (config.locations[i].path == location_config.path)
+					throw std::runtime_error("Error: duplicate location path.");
+			}
+			
+			location = true;
+			locationDirectives.clear();
+			continue;
+		}
 
-            configs.push_back(config);
-            server = false;
-            continue;
-        }
+        if (clean_line == "}")
+		{
+			if (location)
+			{
+				validate_location_config(location_config);
+				config.locations.push_back(location_config);
+				location = false;
+				continue;
+			}
+
+			validate_server_config(config);
+			configs.push_back(config);
+			server = false;
+			continue;
+		}
 		
 		if (location)
 		{
@@ -436,7 +450,7 @@ std::vector<Config> ConfigParser::parse(const std::string& filename)
 	if (server || location)
 		throw std::runtime_error("Error: unclosed block.");
 
-    if (configs.empty())
+	if (configs.empty())
 		throw std::runtime_error("Error: no server config.");
 		
 	return (configs);

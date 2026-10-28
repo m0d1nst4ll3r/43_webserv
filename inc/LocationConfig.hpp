@@ -6,7 +6,7 @@
 /*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/22 18:45:53 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/27 17:43:30 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/10/28 18:54:55 by ltourbe          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,13 +22,13 @@ class LocationConfig
 		
 		LocationConfig();
 		~LocationConfig();
-		
+
 		std::string path;
 		std::vector<std::string> allowedMethods;
 
 		int redirectCode;
 		std::string redirect;
-		
+
 		std::string root;
 
 		bool autoindex;
