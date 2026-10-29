@@ -1,6 +1,7 @@
 #ifndef WEBSERVER_HPP
 #define WEBSERVER_HPP
 
+#include "Config.hpp"
 #include "ServerConfig.hpp"
 #include "EpollInstance.hpp"
 #include "IOChannel.hpp"
@@ -17,6 +18,9 @@ class WebServer
 	WebServer(const std::string& configFile);
 	~WebServer();
 
+	// Additional action required at init
+	void	openListenSockets();
+
 	// Run server loop
 	void	run();
 
@@ -27,7 +31,7 @@ class WebServer
 	private:
 
 	const ServerConfig				_serverConfig;
-	//WebsiteConfig					_websiteConfig; // WIP - No Config yet
+	const std::vector<Config>		_websiteConfigs;
 	EpollInstance					_epoll;
 	std::vector<IOChannel*>			_ioChannels;
 	std::vector<ListenSocket*>		_lsocks;

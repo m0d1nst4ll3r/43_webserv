@@ -9,7 +9,12 @@ CFILES		= main.cpp \
 			  HTTPResponse.cpp \
 			  IOChannel.cpp \
 			  ListenSocket.cpp \
-			  WebServer.cpp
+			  WebServer.cpp \
+			  Config.cpp \
+			  LocationConfig.cpp \
+			  ConfigParser.cpp \
+			  LocationParser.cpp \
+			  Utils.cpp
 
 			  
 SRCDIR		= src

@@ -1,11 +1,20 @@
 #include "ClientSession.hpp"
+#include "Config.hpp"
+#include "EpollInstance.hpp"
+#include "WebServer.hpp"
+#include "ListenSocket.hpp"
+#include "IOChannel.hpp"
+#include "ClientSocket.hpp"
+#include "CGICall.hpp"
+#include "HTTPRequest.hpp"
+#include "HTTPResponse.hpp"
 #include <ctime>
 #include <string>
 #include <iostream>
 
 // WIP - No WebsiteConfig class yet
-ClientSession::ClientSession(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock)
-: IOChannel(serverConfig, epoll),
+ClientSession::ClientSession(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock)
+: IOChannel(serverConfig, websiteConfig, epoll),
 	_webServer(webServer),
 	_socket(epoll, *this, lsock),
 	_cgiCall(0),

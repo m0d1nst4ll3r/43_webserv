@@ -5,10 +5,15 @@
 
 int	main(int argc, char **argv)
 {
-	(void)argc;
+	if (argc != 2)
+	{
+		std::cerr << Color::CYAN << "Usage" << Color::RESET << ":\n    ./webserv config_file\n";
+		return 2;
+	}
 	try
 	{
 		WebServer webServ(std::string(argc > 1 ? argv[1] : ""));
+		webServ.openListenSockets();
 		webServ.run();
 	}
 	catch(const std::exception& e)

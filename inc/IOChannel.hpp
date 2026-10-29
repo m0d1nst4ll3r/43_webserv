@@ -3,6 +3,7 @@
 
 #include "EpollInstance.hpp"
 #include "ServerConfig.hpp"
+#include "Config.hpp"
 #include <ctime>
 #include <stdint.h>
 
@@ -15,7 +16,7 @@ class IOChannel
 {
 	public:
 
-	IOChannel(const ServerConfig& serverConfig, EpollInstance& epoll);
+	IOChannel(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll);
 	virtual ~IOChannel();
 
 	virtual void	handleEvent(uint32_t events) = 0;
@@ -25,7 +26,7 @@ class IOChannel
 	protected:
 
 	const ServerConfig&	_serverConfig;
-	//const WebsiteConfig	_websiteConfig; // WIP -> no Config
+	const Config&		_websiteConfig;
 	EpollInstance&		_epoll;
 	bool				_pendingDelete;
 };

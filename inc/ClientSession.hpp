@@ -2,6 +2,7 @@
 #define CLIENTSESSION_HPP
 
 #include "ServerConfig.hpp"
+#include "Config.hpp"
 #include "EpollInstance.hpp"
 #include "WebServer.hpp"
 #include "ListenSocket.hpp"
@@ -47,9 +48,7 @@ class ClientSession : public IOChannel
 {
 	public:
 
-	// WIP -> No WebsiteConfig class yet
-	//ClientSession(const ServerConfig& serverConfig, const WebsiteConfig& websiteConfig, EpollInstance& epoll, ListenSocket& lsock);
-	ClientSession(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock);
+	ClientSession(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock);
 	~ClientSession();
 
 	// Getter
