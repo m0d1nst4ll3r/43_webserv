@@ -1,3 +1,5 @@
+#include "ConfigParser.hpp"
+#include "Config.hpp"
 #include "WebServer.hpp"
 #include "Color.hpp"
 #include "EpollInstance.hpp"
@@ -36,22 +38,41 @@ namespace
 			|| signal(SIGHUP, handleShutdownSignal) == SIG_ERR)
 			throw std::runtime_error("signal failed: " + std::string(std::strerror(errno)));
 	}
+
+	std::vector<Config>	parseConfig(const std::string& configFile)
+	{
+		ConfigParser	parser;
+		return parser.parse(configFile);
+	}
 }
 
 
 WebServer::WebServer(const std::string& configFile)
-: _numClients(0),
+: _serverConfig(),
+	_websiteConfigs(parseConfig(configFile)),
+	_epoll(),
+	_ioChannels(),
+	_lsocks(),
+	_numClients(0),
 	_listening(true)
 {
-	// 1: Config (will be in initializer list later)
-	(void)configFile; // Ignoring for now
-	// 2: Signals
+	// Setup signals
 	setupSigpipe();
 	setupShutdownSignals();
-	// 3: ListenSockets (only one for now)
-	ListenSocket*	lsocket = new ListenSocket(_serverConfig, _epoll, *this, "localhost", 8080);
-	_ioChannels.push_back(lsocket);
-	_lsocks.push_back(lsocket);
+}
+
+void	WebServer::openListenSockets()
+{
+	// Setup listen sockets, link them to their website config
+	for (std::vector<Config>::const_iterator configit = _websiteConfigs.begin(); configit != _websiteConfigs.end(); ++configit)
+	{
+		for (std::vector<ListenAddress>::const_iterator listenit = configit->listens.begin(); listenit != configit->listens.end(); ++listenit)
+		{
+			ListenSocket*	lsocket = new ListenSocket(_serverConfig, *configit, _epoll, *this, listenit->interface, listenit->port);
+			_ioChannels.push_back(lsocket);
+			_lsocks.push_back(lsocket);
+		}
+	}
 }
 
 // Clear open lsockets and csockets (and their associated CGI)

@@ -1,4 +1,5 @@
 #include "ListenSocket.hpp"
+#include "Config.hpp"
 #include "ServerConfig.hpp"
 #include "IOChannel.hpp"
 #include "FileDescriptor.hpp"
@@ -86,8 +87,8 @@ namespace
 }
 
 //ListenSocket::ListenSocket(const ServerConfig& serverConfig, const WebsiteConfig& websiteConfig, EpollInstance& epoll, const std::string& interface, int port);
-ListenSocket::ListenSocket(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& WebServer, const std::string& interface, int port)
-: IOChannel(serverConfig, epoll),
+ListenSocket::ListenSocket(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll, WebServer& WebServer, const std::string& interface, int port)
+: IOChannel(serverConfig, websiteConfig, epoll),
 	_webServer(WebServer),
 	_interface(interface.empty() ? "0.0.0.0" : interface),
 	_port(port),
@@ -147,7 +148,7 @@ void	ListenSocket::handleEvent(uint32_t events)
 	{
 		try
 		{
-			ClientSession* client = new ClientSession(_serverConfig, _epoll, _webServer, *this);
+			ClientSession* client = new ClientSession(_serverConfig, _websiteConfig, _epoll, _webServer, *this);
 			_webServer.addNewClient(client);
 		}
 		catch(const std::exception& e)

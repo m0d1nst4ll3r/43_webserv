@@ -1,6 +1,7 @@
 #ifndef LISTENSOCKET_HPP
 #define LISTENSOCKET_HPP
 
+#include "Config.hpp"
 #include "ServerConfig.hpp"
 #include "WebServer.hpp"
 #include "IOChannel.hpp"
@@ -25,7 +26,7 @@ class ListenSocket : public IOChannel
 {
 	public:
 
-	ListenSocket(const ServerConfig& serverConfig, EpollInstance& epoll, WebServer& webServer, const std::string& interface, int port);
+	ListenSocket(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll, WebServer& webServer, const std::string& interface, int port);
 	~ListenSocket();
 
 	// Socket methods
