@@ -4,7 +4,7 @@
 #include "EpollInstance.hpp"
 #include "ServerConfig.hpp"
 #include <ctime>
-#include <cstdint>
+#include <stdint.h>
 
 // Interface class for ListenSocket, ClientSession, CGICall
 //

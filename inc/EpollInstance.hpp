@@ -4,7 +4,7 @@
 #include "FileDescriptor.hpp"
 #include <sys/epoll.h>
 #include <vector>
-#include <cstdint>
+#include <stdint.h>
 
 // EpollInstance lifecycle:
 //
@@ -37,8 +37,8 @@ class EpollInstance
 
 	private:
 
-	FileDescriptor					_epollfd;
 	std::vector<struct epoll_event>	_events;
+	FileDescriptor					_epollfd;
 };
 
 #endif /* EPOLLINSTANCE_HPP */

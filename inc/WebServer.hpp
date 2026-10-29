@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+class ListenSocket;
+
 class WebServer
 {
 	public:
@@ -28,7 +30,7 @@ class WebServer
 	EpollInstance					_epoll;
 	std::vector<IOChannel*>			_ioChannels;
 	std::vector<ListenSocket*>		_lsocks;
-	int								_numClients;
+	unsigned int					_numClients;
 	bool							_listening;
 };
 

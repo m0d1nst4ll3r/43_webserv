@@ -11,7 +11,9 @@
 #include "HTTPRequest.hpp"
 #include "HTTPResponse.hpp"
 #include <ctime>
-#include <cstdint>
+#include <stdint.h>
+
+class ClientSocket;
 
 typedef enum e_state
 {

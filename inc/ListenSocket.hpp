@@ -9,7 +9,9 @@
 #include <string>
 #include <sys/socket.h>
 #include <ctime>
-#include <cstdint>
+#include <stdint.h>
+
+class WebServer;
 
 // ListenSocket lifecycle:
 //

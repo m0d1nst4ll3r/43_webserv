@@ -11,8 +11,19 @@
 # **************************************************************************** #
 
 # Source files
-CFILES		= webserv.cpp \
-			  ListenSocket.cpp
+CFILES		= main.cpp \
+			  CGICall.cpp \
+			  ClientSession.cpp \
+			  ClientSocket.cpp\
+			  EpollInstance.cpp \
+			  FileDescriptor.cpp \
+			  HTTPRequest.cpp \
+			  HTTPResponse.cpp \
+			  IOChannel.cpp \
+			  ListenSocket.cpp \
+			  WebServer.cpp
+
+			  
 SRCDIR		= src
 SRC			= $(addprefix $(SRCDIR)/, $(CFILES))
 
@@ -31,7 +42,7 @@ NAME		= webserv
 
 # Compiler settings
 CC			= c++
-CFLAGS		= -Wall -Wextra -Werror -std=c++98 -MMD -MP $(addprefix -I,$(INCDIR))
+CFLAGS		= -Wall -Wextra -Werror -std=c++98 -g -MMD -MP $(addprefix -I,$(INCDIR))
 
 # Make settings
 MAKEFLAGS	+= --no-print-directory

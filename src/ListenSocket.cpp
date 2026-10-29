@@ -13,7 +13,7 @@
 #include <sys/types.h> // socket, bind, listen, setsockopt
 #include <netdb.h> // getaddrinfo, freeaddrinfo, gai_strerror
 #include <unistd.h> // close
-#include <cstdint> // uint32_t
+#include <stdint.h> // uint32_t
 #include <sstream> // convert int port to string
 #include <string>
 #include <iostream>

@@ -40,7 +40,8 @@ namespace
 
 
 WebServer::WebServer(const std::string& configFile)
-: _listening(true)
+: _numClients(0),
+	_listening(true)
 {
 	// 1: Config (will be in initializer list later)
 	(void)configFile; // Ignoring for now
@@ -67,26 +68,26 @@ void	WebServer::run()
 		// 1. Wait
 		int numSockets = _epoll.wait(1000); // 1s timeout
 		// 2. Handle all events
-		for (int i = 0; i < numSockets; ++i)
+		for (int i = 0; gServerRunning && i < numSockets; ++i)
 			reinterpret_cast<IOChannel*>(_epoll[i].data.ptr)->handleEvent(_epoll[i].events);
 		// 3. Check connection number
-		if (_listening && _numClients >= _serverConfig.maxConnections)
+		if (gServerRunning && _listening && _numClients >= _serverConfig.maxConnections)
 		{
 			_listening = false;
 			for (std::vector<ListenSocket*>::iterator it = _lsocks.begin(); it != _lsocks.end(); ++it)
 				(*it)->disable();
 		}
-		else if (!_listening && _numClients < _serverConfig.maxConnections)
+		else if (gServerRunning && !_listening && _numClients < _serverConfig.maxConnections)
 		{
 			_listening = true;
 			for (std::vector<ListenSocket*>::iterator it = _lsocks.begin(); it != _lsocks.end(); ++it)
 				(*it)->enable();
 		}
 		// 4. Check all session timers
-		for (std::vector<IOChannel*>::iterator it = _ioChannels.begin(); it != _ioChannels.end(); ++it)
+		for (std::vector<IOChannel*>::iterator it = _ioChannels.begin(); gServerRunning && it != _ioChannels.end(); ++it)
 			(*it)->checkTimers(std::time(0));
 		// 5. Execute pending deletions
-		for (std::vector<IOChannel*>::iterator it = _ioChannels.begin(); it != _ioChannels.end(); ++it)
+		for (std::vector<IOChannel*>::iterator it = _ioChannels.begin(); gServerRunning && it != _ioChannels.end(); ++it)
 		{
 			if ((*it)->pendingDelete())
 			{

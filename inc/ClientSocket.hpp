@@ -3,10 +3,11 @@
 
 #include "FileDescriptor.hpp"
 #include "ListenSocket.hpp"
-#include "ClientSession.hpp"
 #include "EpollInstance.hpp"
 #include "IOChannel.hpp"
 #include <string>
+
+class ClientSession;
 
 // ClientSocket lifecycle:
 //

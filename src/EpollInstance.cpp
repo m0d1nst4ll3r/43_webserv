@@ -3,7 +3,7 @@
 #include <cstring>
 #include <cerrno>
 #include <sys/epoll.h> // epoll_create1, epoll_wait, epoll_ctl
-#include <cstdint> // uint32_t
+#include <stdint.h> // uint32_t
 #include <string>
 #include <vector>
 
@@ -56,7 +56,11 @@ int		EpollInstance::wait(int timeout_ms)
 	int ret;
 	ret = epoll_wait(_epollfd.fd, &_events[0], 64, timeout_ms);
 	if (ret < 0)
+	{
+		if (errno == EINTR)
+			return 0;
 		throw std::runtime_error("epoll_wait failed: " + std::string(std::strerror(errno)));
+	}
 	return ret;
 }
 
