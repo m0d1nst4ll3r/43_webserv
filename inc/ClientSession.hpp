@@ -61,6 +61,9 @@ class ClientSession : public IOChannel
 
 	private:
 
+	void	_handleEpollin();
+	void	_handleEpollout();
+
 	WebServer&			_webServer;
 	ClientSocket		_socket;
 	CGICall*			_cgiCall;

@@ -92,7 +92,9 @@ void	WebServer::run()
 			if ((*it)->pendingDelete())
 			{
 				delete *it;
-				_ioChannels.erase(it);
+				it = _ioChannels.erase(it);
+				if (it == _ioChannels.end())
+					break;
 			}
 		}
 	}
@@ -102,6 +104,11 @@ void	WebServer::addNewClient(IOChannel* client)
 {
 	_ioChannels.push_back(client);
 	_numClients++;
+}
+
+void	WebServer::removeClient()
+{
+	_numClients--;
 }
 
 void	WebServer::addNewCGI(IOChannel* cgi)

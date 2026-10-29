@@ -21,6 +21,7 @@ class WebServer
 	void	run();
 
 	void	addNewClient(IOChannel* client);
+	void	removeClient();
 	void	addNewCGI(IOChannel* cgi);
 
 	private:

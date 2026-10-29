@@ -66,7 +66,7 @@ namespace
 		freeaddrinfo(res);
 
 		if (!cur) // No bindable address found, throw
-			throw std::runtime_error("cannot bind socket to '" + (interfaceStr.empty() ? "0.0.0.0" : interfaceStr) + ":" + portStr);
+			throw std::runtime_error("cannot bind socket to " + (interfaceStr.empty() ? "0.0.0.0" : interfaceStr) + ":" + portStr);
 
 		return fd;
 	}
