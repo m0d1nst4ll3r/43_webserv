@@ -1,17 +1,17 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: rapohlen <rapohlen@student.42.fr>          +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2026/01/15 16:45:41 by rapohlen          #+#    #+#              #
-#    Updated: 2026/10/23 14:28:19 by rapohlen         ###   ########.fr        #
-#                                                                              #
-# **************************************************************************** #
-
 # Source files
-CFILES		= webserv.cpp
+CFILES		= main.cpp \
+			  CGICall.cpp \
+			  ClientSession.cpp \
+			  ClientSocket.cpp\
+			  EpollInstance.cpp \
+			  FileDescriptor.cpp \
+			  HTTPRequest.cpp \
+			  HTTPResponse.cpp \
+			  IOChannel.cpp \
+			  ListenSocket.cpp \
+			  WebServer.cpp
+
+			  
 SRCDIR		= src
 SRC			= $(addprefix $(SRCDIR)/, $(CFILES))
 
@@ -30,7 +30,7 @@ NAME		= webserv
 
 # Compiler settings
 CC			= c++
-CFLAGS		= -Wall -Wextra -Werror -std=c++98 -MMD -MP $(addprefix -I,$(INCDIR))
+CFLAGS		= -Wall -Wextra -Werror -std=c++98 -g -MMD -MP $(addprefix -I,$(INCDIR))
 
 # Make settings
 MAKEFLAGS	+= --no-print-directory
