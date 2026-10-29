@@ -1,17 +1,17 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile_parser                                    :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: leo <leo@student.42.fr>                    +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2026/01/15 16:45:41 by rapohlen          #+#    #+#              #
-#    Updated: 2026/10/29 18:44:14 by leo              ###   ########.fr        #
-#                                                                              #
-# **************************************************************************** #
-
 # Source files
-CFILES		= webserv.cpp
+CFILES		= main.cpp \
+			  CGICall.cpp \
+			  ClientSession.cpp \
+			  ClientSocket.cpp\
+			  EpollInstance.cpp \
+			  FileDescriptor.cpp \
+			  HTTPRequest.cpp \
+			  HTTPResponse.cpp \
+			  IOChannel.cpp \
+			  ListenSocket.cpp \
+			  WebServer.cpp
+
+			  
 SRCDIR		= src
 SRC			= $(addprefix $(SRCDIR)/, $(CFILES))
 
