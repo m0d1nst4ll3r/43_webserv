@@ -6,7 +6,7 @@
 /*   By: leo <leo@student.42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:46:13 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/11/02 19:35:52 by leo              ###   ########.fr       */
+/*   Updated: 2026/11/02 19:47:19 by leo              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,9 +20,6 @@
 class ConfigParser
 {
 	public:
-    
-		ConfigParser();
-		~ConfigParser();
 
 		static std::vector<Config> parse(const std::string& filename);
 
