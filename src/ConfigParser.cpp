@@ -3,23 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   ConfigParser.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ltourbe <ltourbe@student.42.fr>            +#+  +:+       +#+        */
+/*   By: leo <leo@student.42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/23 16:46:25 by ltourbe           #+#    #+#             */
-/*   Updated: 2026/10/28 19:04:49 by ltourbe          ###   ########.fr       */
+/*   Updated: 2026/11/02 19:45:38 by leo              ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ConfigParser.hpp"
 #include "Utils.hpp"
 
-ConfigParser::ConfigParser()
-{
-}
-
-ConfigParser::~ConfigParser()
-{
-}
 std::string trim(const std::string& str)
 {
 	std::size_t first = str.find_first_not_of(" \t\r\n");
@@ -220,47 +213,11 @@ void push_listen(Config& config, const std::string& line)
 	std::string interface = value.substr(addressStart, colon - addressStart);
 	std::string port = value.substr(colon + 1);
 
+	if (interface.empty())
+		throw std::runtime_error("Error: missing interface.");
+
 	if (port.empty())
 		throw std::runtime_error("Error: missing port.");
-
-	int count = 0;
-	std::size_t octetStart = 0;
-
-	while (octetStart <= interface.size())
-	{
-		std::size_t dot = interface.find('.', octetStart);
-		std::string octet = interface.substr(octetStart,
-			dot == std::string::npos ? std::string::npos : dot - octetStart);
-
-		if (octet.empty() || octet.size() > 3)
-			throw std::runtime_error("Error: invalid IP octet.");
-
-		if (octet.size() > 1 && octet[0] == '0')
-			throw std::runtime_error("Error: leading zeros in IP octet.");
-		
-		int octetValue = 0;
-
-		for (std::size_t i = 0; i < octet.size(); ++i)
-		{
-			if (!std::isdigit(static_cast<unsigned char>(octet[i])))
-				throw std::runtime_error("Error: invalid IP octet.");
-
-			octetValue = octetValue * 10 + (octet[i] - '0');
-		}
-
-		if (octetValue > 255)
-			throw std::runtime_error("Error: IP octet out of range.");
-
-		++count;
-
-		if (dot == std::string::npos)
-			break;
-
-		octetStart = dot + 1;
-	}
-
-	if (count != 4)
-		throw std::runtime_error("Error: wrong interface format.");
 
 	int truePort = 0;
 

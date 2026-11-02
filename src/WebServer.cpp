@@ -38,18 +38,12 @@ namespace
 			|| signal(SIGHUP, handleShutdownSignal) == SIG_ERR)
 			throw std::runtime_error("signal failed: " + std::string(std::strerror(errno)));
 	}
-
-	std::vector<Config>	parseConfig(const std::string& configFile)
-	{
-		ConfigParser	parser;
-		return parser.parse(configFile);
-	}
 }
 
 
 WebServer::WebServer(const std::string& configFile)
 : _serverConfig(),
-	_websiteConfigs(parseConfig(configFile)),
+	_websiteConfigs(ConfigParser::parse(configFile)),
 	_epoll(),
 	_ioChannels(),
 	_lsocks(),
