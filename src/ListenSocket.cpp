@@ -144,12 +144,11 @@ void	ListenSocket::handleEvent(uint32_t events)
 		ss << _port;
 		throw std::runtime_error("unexpected error on " + _interface + ":" + ss.str() + " socket");
 	}
-	if (events & EPOLLIN)
+	if (events & EPOLLIN && _webServer.isListening())
 	{
 		try
 		{
 			ClientSession* client = new ClientSession(_serverConfig, _websiteConfig, _epoll, _webServer, *this);
-			_webServer.addNewClient(client);
 		}
 		catch(const std::exception& e)
 		{ // Log error, but do nothing else
