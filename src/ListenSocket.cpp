@@ -144,7 +144,7 @@ void	ListenSocket::handleEvent(uint32_t events)
 		ss << _port;
 		throw std::runtime_error("unexpected error on " + _interface + ":" + ss.str() + " socket");
 	}
-	if (events & EPOLLIN)
+	if (events & EPOLLIN && _webServer.isListening())
 	{
 		try
 		{
