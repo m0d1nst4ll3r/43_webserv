@@ -149,7 +149,6 @@ void	ListenSocket::handleEvent(uint32_t events)
 		try
 		{
 			ClientSession* client = new ClientSession(_serverConfig, _websiteConfig, _epoll, _webServer, *this);
-			_webServer.addNewClient(client);
 		}
 		catch(const std::exception& e)
 		{ // Log error, but do nothing else

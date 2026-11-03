@@ -25,7 +25,9 @@ ClientSession::ClientSession(const ServerConfig& serverConfig, const Config& web
 	_sendOffset(0),
 	_state(READING_REQUEST),
 	_lastActivity(std::time(0))
-{}
+{
+	_webServer.addNewClient(this);
+}
 
 ClientSession::~ClientSession()
 {
