@@ -28,6 +28,9 @@ class WebServer
 	void	removeClient();
 	void	addNewCGI(IOChannel* cgi);
 
+	// Getter
+	bool	isListening() const;
+
 	private:
 
 	const ServerConfig				_serverConfig;
