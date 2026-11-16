@@ -64,18 +64,17 @@ void	ClientSession::_handleEpollin()
 	// For now, logic is not implemented, just recv until \r\n\r\n
 	try
 	{
-		_recvBuffer.append(_socket.recv()); // No size check yet
-		if (_recvBuffer.find("\r\n\r\n") != std::string::npos) // Found end
-		{ // Just construct fake response and go to SENDING state right away
-			_sendBuffer.append("HTTP/1.1 200 OK\r\n");
-			_sendBuffer.append("Connection: close\r\n"); // closing connection right away for simplicity
-			_sendBuffer.append("Content-Type: text/plain\r\n");
-			_sendBuffer.append("Content-Length: 12");
-			_sendBuffer.append("\r\n\r\n");
-			_sendBuffer.append("Hello world!");
-			_socket.setSend();
-			_state = SENDING_RESPONSE;
-		}
+		ReceiveResult result = _socket.recv();
+
+		if (result.status == RECEIVE_DATA)
+		{
+			_recvBuffer.append(result.data);
+			_lastActivity = std::time(0);
+		}	
+		else if (result.status == RECEIVE_CLOSED)
+			_pendingDelete = true;
+		else if (result.status == RECEIVE_ERROR)
+			_pendingDelete = true;
 	}
 	catch(const std::exception& e)
 	{ // Just close connection for now, and log

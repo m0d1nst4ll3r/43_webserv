@@ -22,13 +22,31 @@ class ClientSocket
 {
 	public:
 
+	enum ReceiveStatus
+	{
+		RECEIVE_DATA,
+		RECEIVE_CLOSED,
+		RECEIVE_ERROR
+	};
+
+	struct ReceiveResult
+	{
+		ReceiveStatus	status;
+		std::string		data;
+
+		ReceiveResult(ReceiveStatus statusValue, const std::string& dataValue)
+		: status(statusValue), data(dataValue)
+		{
+		}
+	};
+
 	// Constructed from a ListenSocket accept()
 	ClientSocket(EpollInstance& epoll, ClientSession& clientSession, ListenSocket& lsock);
 	~ClientSocket();
 
 	// IO methods
-	size_t		send(const char* buf, size_t size);
-	std::string	recv();
+	size_t			send(const char* buf, size_t size);
+	ReceiveResult	recv();
 
 	// Epoll methods
 	void	setRecv();
