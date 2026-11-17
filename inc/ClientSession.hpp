@@ -19,6 +19,7 @@ class ClientSocket;
 typedef enum e_state
 {
 	READING_REQUEST,
+	READING_BODY,
 	WRITING_CGI,
 	READING_CGI,
 	SENDING_RESPONSE
@@ -62,6 +63,9 @@ class ClientSession : public IOChannel
 
 	void	_handleEpollin();
 	void	_handleEpollout();
+	void	_startErrorResponse(int code, std::string reason, std::string body);
+
+	std::string	_bodyBuffer;
 
 	WebServer&			_webServer;
 	ClientSocket		_socket;

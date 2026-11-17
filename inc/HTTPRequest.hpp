@@ -3,6 +3,8 @@
 
 #include <string>
 #include <map>
+#include <vector>
+
 
 // Incomplete class - WIP
 //
@@ -23,10 +25,13 @@ class HTTPRequest
 	public:
 
 	// Construct from input - will throw for any bad input (custom exception)
-	HTTPRequest(const std::string& input);
+	HTTPRequest(const std::string& input, const std::vector<std::string>& legalMethods, const std::vector<std::string>& legalProtocols);
 	~HTTPRequest();
 
 	private:
+
+	void	requestline_parser(std::string line, const std::vector<std::string>& legalMethods, const std::vector<std::string>& legalProtocols);
+	bool	isHexDigit(char character);
 
 	std::string							_method;
 	std::string							_path;

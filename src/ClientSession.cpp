@@ -15,6 +15,7 @@
 // WIP - No WebsiteConfig class yet
 ClientSession::ClientSession(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock)
 : IOChannel(serverConfig, websiteConfig, epoll),
+	_bodyBuffer(),
 	_webServer(webServer),
 	_socket(epoll, *this, lsock),
 	_cgiCall(0),
@@ -65,11 +66,46 @@ void	ClientSession::_handleEpollin()
 	try
 	{
 		ReceiveResult result = _socket.recv();
+		std::string	headers;
 
 		if (result.status == RECEIVE_DATA)
 		{
 			_recvBuffer.append(result.data);
 			_lastActivity = std::time(0);
+			std::size_t separator = _recvBuffer.find("\r\n\r\n");
+			if (separator == std::string::npos)
+			{
+				if (_recvBuffer.size() > _serverConfig.requestHeaderMaxLength)
+				{
+					_startErrorResponse(431, "Request Header Fields Too Large", "Request headers too large.\n");
+					return;
+				}
+				return;
+			}
+			if (separator + 4 > _serverConfig.requestHeaderMaxLength)
+			{
+				_startErrorResponse(431, "Request Header Fields Too Large", "Request headers too large.\n");
+				return;
+			}
+			headers = _recvBuffer.substr(0, separator);
+			_bodyBuffer = _recvBuffer.substr(separator + 4);
+			_recvBuffer.clear();
+
+			try
+			{
+				if (_request)
+				{	
+					delete _request;
+					_request = 0;
+				}
+
+				_request = new HTTPRequest(headers, _serverConfig.legalMethods, _serverConfig.legalProtocols);
+			}
+			catch (const std::exception&)
+			{
+				_startErrorResponse(400, "Bad Request", "Malformed request.\n");
+				return;
+			}
 		}	
 		else if (result.status == RECEIVE_CLOSED)
 			_pendingDelete = true;
@@ -124,4 +160,24 @@ void	ClientSession::checkTimers(std::time_t now)
 {
 	// WIP
 	(void)now;
+}
+
+void	ClientSession::_startErrorResponse(int code, std::string reason, std::string body)
+{
+	if (_response)
+	{
+		delete _response;
+		_response = 0;
+	}
+
+	_response = new HTTPResponse(code);
+	_response->setStatusCode(code);
+	_response->setReasonPhrase(reason);
+	_response->setHeader("Content-Type", "text/plain");
+	_response->setBody(body);
+
+	_sendBuffer = _response->toString();
+	_sendOffset = 0;
+	_state = SENDING_RESPONSE;
+	_socket.setSend();
 }
