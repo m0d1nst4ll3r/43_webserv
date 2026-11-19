@@ -28,10 +28,17 @@ class HTTPRequest
 	HTTPRequest(const std::string& input, const std::vector<std::string>& legalMethods, const std::vector<std::string>& legalProtocols);
 	~HTTPRequest();
 
+	const std::string& getMethod() const;
+	const std::string& getPath() const;
+	const std::string& getProtocol() const;
+	bool hasHeader(const std::string& name) const;
+	const std::string& getHeader(const std::string& name) const;
+
 	private:
 
-	void	requestline_parser(std::string line, const std::vector<std::string>& legalMethods, const std::vector<std::string>& legalProtocols);
-	bool	isHexDigit(char character);
+	void		requestline_parser(const std::string& line, const std::vector<std::string>& legalMethods, const std::vector<std::string>& legalProtocols);
+	void		headers_parser(const std::string& headers);
+	static bool	isHexDigit(char character);
 
 	std::string							_method;
 	std::string							_path;

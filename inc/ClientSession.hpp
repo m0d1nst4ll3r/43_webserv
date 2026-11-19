@@ -64,6 +64,8 @@ class ClientSession : public IOChannel
 	void	_handleEpollin();
 	void	_handleEpollout();
 	void	_startErrorResponse(int code, std::string reason, std::string body);
+	void	_startResponse200();
+
 
 	std::string	_bodyBuffer;
 
@@ -77,6 +79,7 @@ class ClientSession : public IOChannel
 	size_t				_sendOffset;
 	ClientSessionState	_state;
 	std::time_t			_lastActivity;
+	size_t				_expectedBodyLength;
 };
 
 #endif /* CLIENTSESSION_HPP */

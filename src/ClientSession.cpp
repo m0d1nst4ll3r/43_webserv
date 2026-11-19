@@ -11,6 +11,8 @@
 #include <ctime>
 #include <string>
 #include <iostream>
+#include <limits>
+#include <sstream>
 
 // WIP - No WebsiteConfig class yet
 ClientSession::ClientSession(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock)
@@ -25,7 +27,8 @@ ClientSession::ClientSession(const ServerConfig& serverConfig, const Config& web
 	_sendBuffer(),
 	_sendOffset(0),
 	_state(READING_REQUEST),
-	_lastActivity(std::time(0))
+	_lastActivity(std::time(0)),
+	_expectedBodyLength(0)
 {
 	_webServer.addNewClient(this);
 }
@@ -60,15 +63,50 @@ int	ClientSession::getFd() const
 // 4. check if request asks for body, and how (content-length, or chunk ecoding)
 // 5. keep reading for body, but now either wait for reading content-length or chunk encoding is not too big
 // 6. once body is read fully, construct response (or do CGI call)
+
 void	ClientSession::_handleEpollin()
 {
-	// For now, logic is not implemented, just recv until \r\n\r\n
+	if (_state == READING_BODY)
+	{
+		ClientSocket::ReceiveResult result = _socket.recv();
+
+		if (result.status == ClientSocket::RECEIVE_DATA)
+		{
+			_bodyBuffer.append(result.data);
+			_lastActivity = std::time(0);
+
+			if (_bodyBuffer.size() == _expectedBodyLength)
+			{
+				_startResponse200();
+				return;
+			}
+			else if (_bodyBuffer.size() > _expectedBodyLength)
+			{
+				_startErrorResponse(
+					400,
+					"Bad Request",
+					"Invalid request body.\n"
+				);
+			}
+		}
+		else if (result.status == ClientSocket::RECEIVE_CLOSED)
+		{
+			_pendingDelete = true;
+		}
+		else if (result.status == ClientSocket::RECEIVE_ERROR)
+		{
+			_pendingDelete = true;
+		}
+
+		return;
+	}
+
 	try
 	{
-		ReceiveResult result = _socket.recv();
+		ClientSocket::ReceiveResult result = _socket.recv();
 		std::string	headers;
 
-		if (result.status == RECEIVE_DATA)
+		if (result.status == ClientSocket::RECEIVE_DATA)
 		{
 			_recvBuffer.append(result.data);
 			_lastActivity = std::time(0);
@@ -100,6 +138,55 @@ void	ClientSession::_handleEpollin()
 				}
 
 				_request = new HTTPRequest(headers, _serverConfig.legalMethods, _serverConfig.legalProtocols);
+
+				if (_request->hasHeader("transfer-encoding"))
+				{
+					_startErrorResponse(
+						501,
+						"Not Implemented",
+						"Chunked transfer encoding is not supported.\n"
+					);
+					return;
+				}
+				else if (_request->hasHeader("content-length"))
+				{
+					const std::string& value =
+						_request->getHeader("content-length");
+
+					if (value.empty())
+						throw std::runtime_error("Error: invalid Content-Length value.");
+
+					std::size_t convertedValue = 0;
+
+					for (std::size_t i = 0; i < value.size(); ++i)
+					{
+						if (value[i] < '0' || value[i] > '9')
+							throw std::runtime_error("Error: invalid Content-Length value.");
+
+						std::size_t digit = value[i] - '0';
+
+						if (convertedValue >
+							(std::numeric_limits<std::size_t>::max() - digit) / 10)
+							throw std::runtime_error("Error: invalid Content-Length value.");
+
+						convertedValue = convertedValue * 10 + digit;
+					}
+
+					if (convertedValue > _serverConfig.requestBodyMaxLength
+						|| convertedValue > _websiteConfig.maxBodySize)
+						throw std::runtime_error("Error: Content-Length value too big.");
+
+					_expectedBodyLength = convertedValue;
+
+					if (_bodyBuffer.size() < _expectedBodyLength)
+						_state = READING_BODY;
+					else if (_bodyBuffer.size() == _expectedBodyLength)
+						_startResponse200();
+					else
+						_startErrorResponse(400, "Bad Request", "Invalid request body.\n");
+				}
+				else
+					_startResponse200();
 			}
 			catch (const std::exception&)
 			{
@@ -107,9 +194,9 @@ void	ClientSession::_handleEpollin()
 				return;
 			}
 		}	
-		else if (result.status == RECEIVE_CLOSED)
+		else if (result.status == ClientSocket::RECEIVE_CLOSED)
 			_pendingDelete = true;
-		else if (result.status == RECEIVE_ERROR)
+		else if (result.status == ClientSocket::RECEIVE_ERROR)
 			_pendingDelete = true;
 	}
 	catch(const std::exception& e)
@@ -146,7 +233,12 @@ void	ClientSession::_handleEpollout()
 void	ClientSession::handleEvent(uint32_t events)
 {
 	if (events & EPOLLIN)
-		_handleEpollin();
+	{
+		if (_state == READING_REQUEST)
+			_handleEpollin();
+		else if (_state == READING_BODY)
+			_handleEpollin();
+	}
 	else if (events & EPOLLOUT)
 		_handleEpollout();
 	else
@@ -180,4 +272,24 @@ void	ClientSession::_startErrorResponse(int code, std::string reason, std::strin
 	_sendOffset = 0;
 	_state = SENDING_RESPONSE;
 	_socket.setSend();
+}
+
+void ClientSession::_startResponse200()
+{
+    if (_response)
+    {
+        delete _response;
+        _response = 0;
+    }
+
+    _response = new HTTPResponse(200);
+    _response->setStatusCode(200);
+    _response->setReasonPhrase("OK");
+    _response->setHeader("Content-Type", "text/plain");
+    _response->setBody("Hello, World!\n");
+
+    _sendBuffer = _response->toString();
+    _sendOffset = 0;
+    _state = SENDING_RESPONSE;
+    _socket.setSend();
 }

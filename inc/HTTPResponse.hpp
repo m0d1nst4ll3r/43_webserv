@@ -32,6 +32,12 @@ class HTTPResponse
 	HTTPResponse(const HTTPRequest& request); // WIP - Config class missing
 	~HTTPResponse();
 
+	void setStatusCode(int code);
+	void setReasonPhrase(const std::string& reason);
+	void setHeader(const std::string& name, const std::string& value);
+	void setBody(const std::string& body);
+	std::string toString() const;
+
 	private:
 
 	std::string							_protocol;

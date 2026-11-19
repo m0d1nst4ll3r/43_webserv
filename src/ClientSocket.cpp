@@ -45,7 +45,7 @@ size_t	ClientSocket::send(const char* buf, size_t size)
 // Calls a single recv()
 // Normally, recv() will read at least one byte, if the socket was polled
 // If recv() does not read at least one byte, throw to indicate failure (the connection should be closed)
-ReceiveResult	ClientSocket::recv()
+ClientSocket::ReceiveResult ClientSocket::recv()
 {
 	const size_t	bufsize = 16383; // 16 kiB
 	char			buf[bufsize];
@@ -53,15 +53,15 @@ ReceiveResult	ClientSocket::recv()
 	ssize_t			bytesRead = ::recv(_sockfd.fd, buf, bufsize, 0);
 
 	if (bytesRead > 0)
-        return ReceiveResult(
-            RECEIVE_DATA,
+        return ClientSocket::ReceiveResult(
+            ClientSocket::RECEIVE_DATA,
             std::string(buf, static_cast<size_t>(bytesRead))
         );
 
     if (bytesRead == 0)
-        return ReceiveResult(RECEIVE_CLOSED, std::string());
+        return ClientSocket::ReceiveResult(ClientSocket::RECEIVE_CLOSED, std::string());
 
-    return ReceiveResult(RECEIVE_ERROR, std::string());
+    return ClientSocket::ReceiveResult(ClientSocket::RECEIVE_ERROR, std::string());
 }
 
 // Change epoll events to reflect READING mode
