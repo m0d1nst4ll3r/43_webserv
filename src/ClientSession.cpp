@@ -18,6 +18,9 @@
 ClientSession::ClientSession(const ServerConfig& serverConfig, const Config& websiteConfig, EpollInstance& epoll, WebServer& webServer, ListenSocket& lsock)
 : IOChannel(serverConfig, websiteConfig, epoll),
 	_bodyBuffer(),
+	_chunkBuffer(),
+	_currentChunkSize(),
+	_currentChunkRead(),
 	_webServer(webServer),
 	_socket(epoll, *this, lsock),
 	_cgiCall(0),
@@ -90,13 +93,9 @@ void	ClientSession::_handleEpollin()
 			}
 		}
 		else if (result.status == ClientSocket::RECEIVE_CLOSED)
-		{
 			_pendingDelete = true;
-		}
 		else if (result.status == ClientSocket::RECEIVE_ERROR)
-		{
 			_pendingDelete = true;
-		}
 
 		return;
 	}
@@ -141,11 +140,16 @@ void	ClientSession::_handleEpollin()
 
 				if (_request->hasHeader("transfer-encoding"))
 				{
-					_startErrorResponse(
-						501,
-						"Not Implemented",
-						"Chunked transfer encoding is not supported.\n"
-					);
+					const std::string& value =
+						_request->getHeader("transfer-encoding");
+
+					if (value != "chunked")
+						throw std::runtime_error("Error: invalid Transfer-encoding type.");
+
+					_chunkBuffer = _bodyBuffer;
+					_bodyBuffer.clear();
+					_state = READING_CHUNK_SIZE;
+					_parseChunkedBuffer();
 					return;
 				}
 				else if (_request->hasHeader("content-length"))
@@ -174,7 +178,14 @@ void	ClientSession::_handleEpollin()
 
 					if (convertedValue > _serverConfig.requestBodyMaxLength
 						|| convertedValue > _websiteConfig.maxBodySize)
-						throw std::runtime_error("Error: Content-Length value too big.");
+					{
+						_startErrorResponse(
+							413,
+							"Payload Too Large",
+							"Request body too large.\n"
+						);
+						return;
+					}
 
 					_expectedBodyLength = convertedValue;
 
@@ -238,6 +249,9 @@ void	ClientSession::handleEvent(uint32_t events)
 			_handleEpollin();
 		else if (_state == READING_BODY)
 			_handleEpollin();
+		else if (_state == READING_CHUNK_SIZE || _state == READING_CHUNK_DATA
+			|| _state == READING_CHUNK_TRAILERS || _state == READING_CHUNK_CRLF)
+			_handleChunkedBody();
 	}
 	else if (events & EPOLLOUT)
 		_handleEpollout();
@@ -250,8 +264,38 @@ void	ClientSession::handleEvent(uint32_t events)
 
 void	ClientSession::checkTimers(std::time_t now)
 {
-	// WIP
-	(void)now;
+	unsigned long	timeout;
+	bool readingBody;
+
+    readingBody =
+        _state == READING_BODY
+        || _state == READING_CHUNK_SIZE
+        || _state == READING_CHUNK_DATA
+        || _state == READING_CHUNK_CRLF
+        || _state == READING_CHUNK_TRAILERS;
+
+	if (_state == READING_REQUEST)
+		timeout = _serverConfig.requestHeaderTime;
+	else if (readingBody)
+		timeout = _serverConfig.requestBodyTime;
+	else if (_state == SENDING_RESPONSE)
+		timeout = _serverConfig.responseTime;
+	else
+		return;
+
+	if (now - _lastActivity < static_cast<std::time_t>(timeout))
+		return;
+
+	if (_state == READING_REQUEST || readingBody)
+	{
+		_startErrorResponse(
+			408,
+			"Request Timeout",
+			"Request timed out.\n"
+		);
+	}
+	else
+		_pendingDelete = true;
 }
 
 void	ClientSession::_startErrorResponse(int code, std::string reason, std::string body)
@@ -262,6 +306,7 @@ void	ClientSession::_startErrorResponse(int code, std::string reason, std::strin
 		_response = 0;
 	}
 
+	_lastActivity = std::time(0);
 	_response = new HTTPResponse(code);
 	_response->setStatusCode(code);
 	_response->setReasonPhrase(reason);
@@ -282,6 +327,7 @@ void ClientSession::_startResponse200()
         _response = 0;
     }
 
+	_lastActivity = std::time(0);
     _response = new HTTPResponse(200);
     _response->setStatusCode(200);
     _response->setReasonPhrase("OK");
@@ -292,4 +338,144 @@ void ClientSession::_startResponse200()
     _sendOffset = 0;
     _state = SENDING_RESPONSE;
     _socket.setSend();
+}
+
+void	ClientSession::_handleChunkedBody()
+{
+	ClientSocket::ReceiveResult result = _socket.recv();
+
+		if (result.status == ClientSocket::RECEIVE_DATA)
+		{
+			_chunkBuffer.append(result.data);
+			_lastActivity = std::time(0);
+
+			try
+			{
+				_parseChunkedBuffer();
+			}
+			catch (const std::exception&)
+			{
+				_startErrorResponse(
+					400,
+					"Bad Request",
+					"Malformed chunked body.\n"
+				);
+			}
+		}
+		else if (result.status == ClientSocket::RECEIVE_CLOSED)
+			_pendingDelete = true;
+		else if (result.status == ClientSocket::RECEIVE_ERROR)
+			_pendingDelete = true;
+
+		return;
+}
+
+void	ClientSession::_parseChunkedBuffer()
+{
+	
+	while (true)
+	{
+		if (_state == READING_CHUNK_SIZE)
+		{
+			std::size_t	lineEnd = _chunkBuffer.find("\r\n");
+
+			if (lineEnd == std::string::npos)
+				return;
+
+			std::string	sizeLine = _chunkBuffer.substr(0, lineEnd);
+
+			_chunkBuffer.erase(0, lineEnd  + 2);
+
+			std::size_t extension = sizeLine.find(';');
+
+            if (extension != std::string::npos)
+                sizeLine.erase(extension);
+
+            if (sizeLine.empty())
+                throw std::runtime_error("Invalid chunk size.");
+
+			std::istringstream	sizeStream(sizeLine);
+			std::size_t			parsedSize = 0;
+			std::string			extra;
+
+			if (!(sizeStream >> std::hex >> parsedSize) || (sizeStream >> extra))
+				throw std::runtime_error("Wong chunk format");
+
+			_currentChunkSize = parsedSize;
+			_currentChunkRead = 0;
+
+			if (_currentChunkSize == 0)
+				_state = READING_CHUNK_TRAILERS;
+			else
+				_state = READING_CHUNK_DATA;
+		}
+
+		if (_state == READING_CHUNK_DATA)
+		{
+			std::size_t remaining = _currentChunkSize - _currentChunkRead;
+			
+			if (_chunkBuffer.empty())
+                return;
+
+			std::size_t available = _chunkBuffer.size();
+            std::size_t toCopy = remaining;
+
+            if (available < toCopy)
+                toCopy = available;
+		
+			_bodyBuffer.append(_chunkBuffer, 0, toCopy);
+
+			_chunkBuffer.erase(0, toCopy);
+			_currentChunkRead += toCopy;
+
+			if (_bodyBuffer.size() > _serverConfig.requestBodyMaxLength || _bodyBuffer.size() > _websiteConfig.maxBodySize)
+            {
+                _startErrorResponse(
+                    413,
+                    "Payload Too Large",
+                    "Request body too large.\n"
+                );
+                return;
+            }
+			
+			if (_currentChunkRead < _currentChunkSize)
+                return;
+
+            _state = READING_CHUNK_CRLF;
+		}
+
+		if (_state == READING_CHUNK_CRLF)
+        {
+            if (_chunkBuffer.size() < 2)
+                return;
+
+            if (_chunkBuffer.compare(0, 2, "\r\n") != 0)
+                throw std::runtime_error(
+                    "Missing chunk terminator."
+                );
+
+            _chunkBuffer.erase(0, 2);
+            _currentChunkSize = 0;
+            _currentChunkRead = 0;
+            _state = READING_CHUNK_SIZE;
+        }
+
+		if (_state == READING_CHUNK_TRAILERS)
+		{
+			std::size_t lineEnd = _chunkBuffer.find("\r\n");
+
+            if (lineEnd == std::string::npos)
+                return;
+
+            std::string trailerLine = _chunkBuffer.substr(0, lineEnd);
+
+            _chunkBuffer.erase(0, lineEnd + 2);
+
+            if (trailerLine.empty())
+            {
+                _startResponse200();
+                return;
+            }
+		}
+	}
 }

@@ -20,6 +20,10 @@ typedef enum e_state
 {
 	READING_REQUEST,
 	READING_BODY,
+	READING_CHUNK_SIZE,
+	READING_CHUNK_DATA,
+	READING_CHUNK_CRLF,
+	READING_CHUNK_TRAILERS,
 	WRITING_CGI,
 	READING_CGI,
 	SENDING_RESPONSE
@@ -65,9 +69,14 @@ class ClientSession : public IOChannel
 	void	_handleEpollout();
 	void	_startErrorResponse(int code, std::string reason, std::string body);
 	void	_startResponse200();
+	void	_handleChunkedBody();
+	void	_parseChunkedBuffer();
 
 
 	std::string	_bodyBuffer;
+	std::string	_chunkBuffer;
+	std::size_t	_currentChunkSize;
+	std::size_t	_currentChunkRead;
 
 	WebServer&			_webServer;
 	ClientSocket		_socket;
