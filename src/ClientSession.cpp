@@ -30,8 +30,6 @@ ClientSession::ClientSession(const ServerConfig& serverConfig, const Config& web
 ClientSession::~ClientSession()
 {
 	_webServer.removeClient();
-	if (_cgiCall)
-		delete _cgiCall;
 	if (_request)
 		delete _request;
 	if (_response)
