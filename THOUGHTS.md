@@ -160,6 +160,64 @@ We can also go for 1.1. This is what I blindly went for before even deciding any
 Note: `Connection: keep-alive` is an opt-in for HTTP/1.0, we should have a special case for it to override the default 1.0 close behaviour. Or we can ignore it. This is an unofficial extension.
 Note: HTTP/1.2 is handled by *some* servers by using the highest version of HTTP 1 that they support, so 1.1 - this is recommended by RFC 9112, but many modern servers will choose to strictly reject the request.
 
+### Program Logic Flow
+
+## Concept
+
+Listen Socket is readable -> Client Socket opens (Client Session is created)
+
+At start, Client Session listens for a request
+
+It wants \r\n\r\n an handles errors which might cause a response
+
+Once it's received, it parses and creates a Request, which might again cause an error response
+
+It decides whether it needs to listen for a body, if so, it receives the body either with length or in chunked (might cause error response)
+
+Once everything is received, we are processing the request and routing it. Is it asking for a static resource or a CGI resource ?
+
+Static resource -> seek and serve (depending on what we found)
+
+CGI resource -> set up CGI (pipe, fork, dup, envp, execve) -> write to CGI -> read from CGI -> respond
+
+For either choice, we end by building a response
+
+After all this, depending on the connection state (close or keep-alive), we either close or continue listening for another request
+
+## Visual
+
+Session starts
+     |
+     |---------------------------------┐
+     V            error?               |
+Read request   --------------┐         |
+     |                       |         |
+     |                       |         |
+     V            error?     |         |
+Read body      --------------|         |
+     |                       |         |
+     |                       |         |
+     V            error?     |         |
+Process request -------------|         |
+ |       |                   |         |
+ | cgi   | no cgi            |         |
+ V       |        error?     |         |
+CGI Call |      -------------|         |
+ |       |                   |         |
+ |       |                   |         |
+ V       V        can cause  |         |
+Build response  <------------|         |
+(resp may be)     response?  |         |
+   (error)                   |         |
+    close?                   |         |
+      |         no           |         |
+      |--------------------------------┘
+  yes |                      |
+      V                      |
+Close session  <-------------┘
+
+
+
 ### Thoughts Prompt
 
 I am working on my c++98 web server school project. My teammate completed the config parser and I completed the back end skeleton. I know that the program structure I implemented is not perfect or ideal, but this is a learning experience, as this is my first real C++ project, so it is good enough for me now. We're now moving on to the details of the back end implementation: request parsing, response construction, CGI scripts, timeout logic, and all of the error cases which will cause a client session to drop after potentially sending an error response.
