@@ -122,7 +122,7 @@ For our case, either is fine. Tolerating \n is convenient for our own tests.
 
 In order that we might catch the errors.
 
-None: If the socket has any issue and we can't respond
+No code: If the socket has any issue and we can't respond
 429: Too many requests (we will need to implement this!)
 400: Malformed input, method is invalid, or too long, or protocol is invalid, or too long, or received bytes are too much (before body)
 414: Target field is too long
@@ -186,6 +186,8 @@ After all this, depending on the connection state (close or keep-alive), we eith
 
 ## Visual
 
+(see excalidraw file)
+
 Session starts
      |
      |---------------------------------┐
@@ -216,41 +218,67 @@ Build response  <------------|         |
       V                      |
 Close session  <-------------┘
 
+## Error Logic
 
+Errors come in two forms: one tries to respond (if possible), the other just closes the socket.
 
-### Thoughts Prompt
+If the error cannot respond, e.g the socket unexpectedly died on us, we should just close. However, as long as the connection is still active, we should respond.
 
-I am working on my c++98 web server school project. My teammate completed the config parser and I completed the back end skeleton. I know that the program structure I implemented is not perfect or ideal, but this is a learning experience, as this is my first real C++ project, so it is good enough for me now. We're now moving on to the details of the back end implementation: request parsing, response construction, CGI scripts, timeout logic, and all of the error cases which will cause a client session to drop after potentially sending an error response.
+Because errors can cause responses, they are similar to successful responses. All that changes is the content of the response, but the same logic should be reused.
 
-Let me describe the structure first. The program's heart is a WebServer class, which is my orchestrator - it sets up signal management, sets up epoll, reads the config (with my friend's ConfigParser class which returns a Config vector), opens listen sockets according to the config, and runs the server loop.
+Errors can also come at different stages of the logic flow. For example, they can come right after accepting the session (rate limiting error, 429). They can happen at almost every stage.
 
-This loop calls an epoll_wait with a 1 second timeout thanks to my EpollInstance class. Epoll has already been populated by all the ListenSocket objects on their construction. On epoll_wait return, I check every returned event in a loop. Since I registered object pointers in epoll data.ptr, I can simply grab the pointer and call my handleEvent() virtual fonction. Because later I will also have other types of objects to register in epoll than just ListenSocket, I opted to make them all derive from a common IOChannel interface (the name is not ideal). The IOChannel class exposes 3 pure virtual functions: a handleEvent(uint32_t events) function, a checkTimers(std::time_t now) function, and a pendingDelete() getter function. 3 classes derive from it: ListenSocket, ClientSession, and CGICall. Each has its own handleEvent() logic, which is the heart of the program.
+Since errors and exceptions go hand in hand, I really want to use exceptions.
 
-After the handleEvent loop, I simply run a global checkTimers() on all my IOChannel objects, ensuring that CGI calls or connections never hang indefinitely, and execute all pending deletions (when a ClientSession or CGICall dies, it flags itself for deletion and waits - ensuring that any further related events have a chance to safely abort).
+## To add
 
-Almost everything else happens in constructors and destructors, for now. When a ListenSocket constructs, it does the interface address resolving, socket opening and binding, listening and adding itself to epoll. ListenSocket is only destructed on server shutdown, and only deletes itself from epoll and closes its fd. When a ClientSession constructs due to a ListenSocket's handleEvent(), it calls accept, adds itself to epoll and lets the server manage its own IOChannel vector and state. On destruction, it removes itself from epoll, 
+- Structure matching error codes to error descriptions as per HTTP specs
+- Structure to register IP addresses with amount of recently sent requests, to do rate limiting
+- Logic at client session creation to check for rate limit and automatic 429 response with correct try-after header
+- Logic on request processing to lookup target config, e.g `/contact/toto/file` will first look for a config for target `/contact/toto/file` then `/contact/toto` then `/contact` then `/`
 
-### CGI Call
+### Thoughts
 
-Has to be in server's IOChannel vector if we want to check timers on it during the loop.
-We could do it differently though: check a CGI Call timer when we check the Client Session timer. The Client Session could take responsibility for the CGI Call.
+A Response has:
 
-However, CGI Call has to register itself in epoll. If EPOLLERR or EPOLLHUP arrives and CGI Call has registered its Client Session, we cannot differentiate between CGI Pipes/Client Socket. So CGI needs its own `handleEvent()`, at the very least.
+`protocol code-status` (code-status go together and should be defined in a struct or enum or something)
 
-If we don't register CGI Call in server's IOChannel, Client Session has to handle full responsibility: it has to destroy it with itself (this is already the case, code smell), and it has to check its timer along with its own.
+Headers
 
-If we do register CGI Call, it can check its own timer and it should destroy itself (Client Session should NOT try to destroy it).
+Body
 
-It makes more sense for a Client Session to fully own its CGI Call, because that's the way they are logically linked in reality. A Client Session can exist without CGI Call but a CGI Call cannot exist without a Client Session. A CGI Call still needs its own handleEvent and checkTimers though since it has to receive the events from epoll, but its timers would be checked with the Client Session.
+We have a Response object. How do we build it? The way I envisioned it was directly passing the Request to the Response constructor and letting it do its thing.
 
-On any kind of error, such as EPOLLHUP or a timeout, the CGI Call needs to be deleted and the error needs to go back up to the ClientSession so that it can respond to the client. On EPOLL errors, the CGI will be called by itself, not from Client Session, so it needs a way to notify the Client Session about what happened.
+This can work, however this implies all of the request-processing logic will be found in the Response constructor. Is this way acceptable? Is there a better way to do things?
 
-There is a logical paradox in how a CGI Call object should be destroyed if the Client Session owns it, while a CGI Call can be called by itself without a Client Session from EPOLL events. If the event is an error or a last EPOLLIN after which the object should be destroyed, the object has to call the Client Session and ask it to destroy it. But this will be done during the execution of a function of the object, so the destruction will happen before exiting that object's function.
+### Prompts
 
-While technically possible, this seems like bad code. Thus, a CGI Call should probably be owned by the server before being owned by its Client Session. The two should simply be linked and exist independently from each other, technically (even though they are logically linked).
+## TMP1
 
-If we commit to this idea, we need to decide how a CGI Call acts on an EPOLLERR, last EPOLLIN, or timeout. The first two are from events, they will be called from a handleEvent from server. The third is called from a checkTimers from server also (if CGI is to be independent).
+I am thinking and planning around my web server program. I would like some guidance on my choices because I have just arrived to Object Oriented Programming and do not trust my instincts yet.
 
-A CGI object should probably hold its own two buffers, one for sending, the other for receiving. The receiving buffer should probably have a limit (we set CGIResponseMaxLength in ServerConfig), but the sending one doesn't need one since we build it ourselves from a capped request.
+I have a `ClientSession` class that holds `Request*` and `Response*` objects. This felt intuitively right to me: a Session might not always hold a Request or Response (like before receiving any data, or after sending back a response with keep-alive). I also designed my Request class to construct with a string: specifically, all of the data that I receive before the body (up to the first `\r\n\r\n`). It parses the string and, if all of the request syntax is correct, it constructs with its `_protocol`, `_method`, and other fields holding the right data. Note that this constructor only verifies HTTP syntax, it doesn't process anything yet. I then process whether I should read a body next, and add the body to the Request object. Then, I need to process the Request. My instinct was to create my Response class so that I can send a Request to it
 
-**Waitpid:** an important detail, once a CGI call is terminated for whatever reason, I need to waitpid it, and since the waitpid needs to be non-blocking, I need to run it in a loop. So I need to keep in memory every pid and set up a wait routine that attempts waitpid on each of them. 
+## TMP2
+
+I'm thinking and planning around my web server. Specifically, thinking about how error responses fit in my logic. My logic flow for a Client Session will look something like this:
+
+1. Session Start - EPOLLIN came in on a Listen Socket
+2. Read Request - until \r\n\r\n
+3. Read Body - if there is one
+4. Process Request - determine how to reach/handle the targeted resource, might cause a CGI Call
+5. CGI Call - execute script
+6. Build Response and Send - from step 4 or 5
+
+Errors can happen at most stages. Some examples:
+
+1. 429 - rate limiting, detected right after accepting on the Listen Socket
+2. 413 - too big content-length
+3. 408 - timeout, data came in too slowly
+4. 405 - method not allowed by website config
+5. 502 - CGI response malformed (rare, but might happen)
+6. At this point, there should be no other error than a send timeout which causes no response
+
+These example errors all cause the building and sending of a response. I haven't built a function for Response building yet, but am thinking about how to implement this. Here are my thoughts:
+
+I have a `ClientSession` class containing a `Request*` and `Response*`. I start building my Request right at step 2 (after finding \r\n\r\n) and complete it at step 3 (with the body). If everything goes right, I will build my Response at step 6, but I might build it earlier. 
